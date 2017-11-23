@@ -1,0 +1,36 @@
+{
+  "name": "CA APM",
+  "id": "novatec-ca-apm-datasource",
+  "type": "datasource",
+
+  "metrics": true,
+  "annotations": false,
+
+  "info": {
+    "description": "Grafana Data Source for CA APM",
+    "author": {
+      "name": "NovaTec",
+      "url": "https://www.novatec-gmbh.de/"
+    },
+    "links": [{
+      "name": "NovaTec",
+      "url": "https://www.novatec-gmbh.de/"
+    },
+    {
+      "name": "GitHub",
+      "url": ""
+    },
+      {
+        "name": "MIT License",
+        "url": ""
+      }
+    ],
+    "version": "1.0.0",
+    "updated": "2018-01-26"
+  },
+
+  "dependencies": {
+    "grafanaVersion": "3.X.X",
+    "plugins": []
+  }
+}
