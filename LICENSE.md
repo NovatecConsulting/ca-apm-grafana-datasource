@@ -1,7 +1,7 @@
 The MIT License (MIT)
 =====================
 
-Copyright © `2018` `NovaTec Consulting GmbH <info@novatec-gmbh.de>`
+Copyright © 2017 - present NovaTec Consulting GmbH <info@novatec-gmbh.de>
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
