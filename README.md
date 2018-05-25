@@ -9,8 +9,8 @@ This software is not affiliated with or supported by CA Technologies.
 * Query Builder: Browse available metrics to construct a metric query
 * Refine the query afterwards with basic regular expressions, e.g. wildcards
 * Raw Query Mode: Construct your query manually to leverage all regex features
+* Use query-based variables for templating (agents and metrics)
 * Automatic character escaping, can be disabled
-* Basic templating is supported
 
 ![Demo-Recording](https://github.com/NovaTecConsulting/ca-apm-grafana-datasource/blob/master/media/query-demo.gif)
 

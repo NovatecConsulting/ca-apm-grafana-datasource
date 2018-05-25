@@ -24,9 +24,11 @@ var ApmDatasource = /** @class */ (function () {
                     resolve();
                 }
                 else {
-                    var agentRegex = _this.templateSrv.replace(target.agentRegex, options.scopedVars, 'regex');
-                    var metricRegex = _this.templateSrv.replace(target.metricRegex, options.scopedVars, 'regex');
-                    var dataFrequency = _this.templateSrv.replace("" + target.dataFrequency, options.scopedVars, 'regex');
+                    // replace variables, no escaping
+                    var agentRegex = _this.templateSrv.replace(target.agentRegex, options.scopedVars);
+                    var metricRegex = _this.templateSrv.replace(target.metricRegex, options.scopedVars);
+                    var dataFrequency = _this.templateSrv.replace("" + target.dataFrequency, options.scopedVars);
+                    // escape common metric path characters ("|", "(", ")")
                     if (target.autoEscape) {
                         agentRegex = _this.escapeQueryString(agentRegex);
                         metricRegex = _this.escapeQueryString(metricRegex);
@@ -55,6 +57,27 @@ var ApmDatasource = /** @class */ (function () {
         return Promise.all(requests).then(function () {
             return grafanaResponse;
         });
+    };
+    ApmDatasource.prototype.metricFindQuery = function (query) {
+        if (query.lastIndexOf("Agents|", 0) === 0) {
+            var agentRegex = query.substring(7);
+            return this.getAgentSegments(agentRegex).then(function (agents) {
+                return agents.map(function (agent) {
+                    return { text: agent };
+                });
+            });
+        }
+        else if (query.lastIndexOf("Metrics|", 0) === 0) {
+            var metricRegex = query.substring(8);
+            return this.getMetricSegments(".*", metricRegex).then(function (metrics) {
+                return metrics.map(function (metric) {
+                    return { text: metric };
+                });
+            });
+        }
+        else {
+            return Promise.resolve([]);
+        }
     };
     ApmDatasource.prototype.testDatasource = function () {
         var _this = this;

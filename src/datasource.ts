@@ -28,10 +28,13 @@ export class ApmDatasource {
                 if (target.hide || !(target.agentRegex && target.metricRegex && target.dataFrequency)) {
                     resolve();
                 } else {
-                    let agentRegex = this.templateSrv.replace(target.agentRegex, options.scopedVars, 'regex');
-                    let metricRegex = this.templateSrv.replace(target.metricRegex, options.scopedVars, 'regex');
-                    let dataFrequency = this.templateSrv.replace("" + target.dataFrequency, options.scopedVars, 'regex');
 
+                    // replace variables, no escaping
+                    let agentRegex = this.templateSrv.replace(target.agentRegex, options.scopedVars);
+                    let metricRegex = this.templateSrv.replace(target.metricRegex, options.scopedVars);
+                    let dataFrequency = this.templateSrv.replace("" + target.dataFrequency, options.scopedVars);
+
+                    // escape common metric path characters ("|", "(", ")")
                     if (target.autoEscape){
                         agentRegex = this.escapeQueryString(agentRegex);
                         metricRegex = this.escapeQueryString(metricRegex);
@@ -64,6 +67,26 @@ export class ApmDatasource {
         return Promise.all(requests).then(() => {
             return grafanaResponse;
         });
+    }
+
+    metricFindQuery(query) {
+        if (query.lastIndexOf("Agents|", 0) === 0) {
+            const agentRegex = query.substring(7);
+            return this.getAgentSegments(agentRegex).then((agents) => {
+                return agents.map(agent => {
+                    return { text: agent };
+                });
+            });
+        } else if (query.lastIndexOf("Metrics|", 0) === 0) {
+            const metricRegex = query.substring(8);
+            return this.getMetricSegments(".*", metricRegex).then((metrics) => {
+                return metrics.map(metric => {
+                    return { text: metric };
+                });
+            });
+        } else {
+            return Promise.resolve([]);
+        }
     }
 
     testDatasource() {
