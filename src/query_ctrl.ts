@@ -192,12 +192,15 @@ export class ApmQueryCtrl extends QueryCtrl {
 
     private updateSegments(segments, updatedSegment, updatedSegmentIndex, newSegmentLabel) {
         
-        if (updatedSegment.value != '.*') {
-            // discard trailing segments
+        // discard trailing segments if the updated segment does NOT end with a wildcard
+        // reasoning: most likely the trailing segments don't make any sense within the new context
+        if (updatedSegment.value.slice(-1) != '*') {
             segments.length = updatedSegmentIndex + 1;
         }
 
-        if (updatedSegment.value == '.*') {
+        // if the updated segments ends with a wildcard, make it expandable
+        // reasoning: a wildcard segment might allow additional browsable path elements
+        if (updatedSegment.value.slice(-1) == '*') {
             updatedSegment.expandable = true
         }
 
