@@ -12,7 +12,7 @@ This software is not affiliated with or supported by CA Technologies.
 * Automatic character escaping, can be disabled
 * Basic templating is supported
 
-![Demo-Recording](https://github.com/oberschlauberger/ca-apm-grafana-datasource/blob/master/media/query-demo.gif)
+![Demo-Recording](https://github.com/NovaTecConsulting/ca-apm-grafana-datasource/blob/master/media/query-demo.gif)
 
 Just copy the contents of this repository to the plugin directory of your Grafana installation. Assuming the default data path, you should end up with `/var/lib/grafana/plugins/ca-apm-datasource` (Linux) or `<Grafana home>/data/plugins/ca-apm-datasource` (Windows) for example. Only the dist directory is required.
 
@@ -29,7 +29,7 @@ docker run \
 ## Data Source Configuration
 To configure a CA APM data source in Grafana, you just have to provide the APM Enterprise Manager's API endpoint and proper authentication details (HTTP basic authentication). The specified user must be authorized to use the Metrics Data Web Service. Click "Save & Test" to make sure that your configuration works correctly.
 
-![Data Source Config](https://github.com/oberschlauberger/ca-apm-grafana-datasource/blob/master/media/data-source-config.jpg)
+![Data Source Config](https://github.com/NovaTecConsulting/ca-apm-grafana-datasource/blob/master/media/data-source-config.jpg)
 
 ## Metric Queries
 To construct a metric query, first create a new panel on a dashboard and select a CA APM data source.
