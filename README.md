@@ -43,3 +43,6 @@ Click "Toggle Edit Mode" on the right-hand triple bar menu to switch to raw quer
 Copyright (c) 2017 NovaTec Consulting GmbH. All rights reserved.
 
 Licensed under the [MIT](LICENSE.md) License.
+
+## Issues, Feedback and Support
+If you experience any issues, have some feedback, or are interested in support, contact us here on GitHub or via email at apm@novatec-gmbh.de.
