@@ -38,6 +38,13 @@ When you add a new query for a panel, the query builder mode is used by default.
 ### Raw Query Mode
 Click "Toggle Edit Mode" on the right-hand triple bar menu to switch to raw query mode. Although the query builder mode supports basic regular expressions, you can use the raw query mode to use more advanced regex features. Some regular expressions might require that you disable automatic escaping by toggling the respective checkbox.
 
+### Query Variables
+You can create variables for templating based on APM queries. You can either query for agents or metrics. For agents, prepend your agent regex with "Agents|", for metrics use "Metrics|" instead. For example, "Agents|.+" will get you all agents. Use the regex option to transform your query results. See the animation below for an example of an agent query:
+![Demo-Recording](https://github.com/NovaTecConsulting/ca-apm-grafana-datasource/blob/master/media/query_variables.gif)
+
+### Temporal Resolution Variable
+Considering the different temporal aggregation levels of CA APM, it makes sense to use a template variable to control the temporal resolution of time series data dynamically. Simply create a custom dashboard variable and use `15s,30s,1m,2m,6m,12m,24m,48m,1h,168m,12h` for the values.
+
 ## License
 
 Copyright (c) 2017 NovaTec Consulting GmbH. All rights reserved.
