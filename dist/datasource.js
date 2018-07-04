@@ -24,15 +24,18 @@ var ApmDatasource = /** @class */ (function () {
                     resolve();
                 }
                 else {
-                    // replace variables, no escaping
-                    var agentRegex = _this.templateSrv.replace(target.agentRegex, options.scopedVars);
-                    var metricRegex = _this.templateSrv.replace(target.metricRegex, options.scopedVars);
-                    var dataFrequency = _this.templateSrv.replace("" + target.dataFrequency, options.scopedVars);
+                    var agentRegex = target.agentRegex;
+                    var metricRegex = target.metricRegex;
+                    var dataFrequency = target.dataFrequency;
                     // escape common metric path characters ("|", "(", ")")
                     if (target.autoEscape) {
                         agentRegex = _this.escapeQueryString(agentRegex);
                         metricRegex = _this.escapeQueryString(metricRegex);
                     }
+                    // replace variables, no escaping
+                    agentRegex = _this.templateSrv.replace(agentRegex, options.scopedVars, 'regex');
+                    metricRegex = _this.templateSrv.replace(metricRegex, options.scopedVars, 'regex');
+                    dataFrequency = _this.templateSrv.replace("" + dataFrequency, options.scopedVars, 'regex');
                     var headers = {
                         "SOAPAction": "getMetricData",
                         "Content-Type": "text/xml"

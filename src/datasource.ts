@@ -29,16 +29,20 @@ export class ApmDatasource {
                     resolve();
                 } else {
 
-                    // replace variables, no escaping
-                    let agentRegex = this.templateSrv.replace(target.agentRegex, options.scopedVars);
-                    let metricRegex = this.templateSrv.replace(target.metricRegex, options.scopedVars);
-                    let dataFrequency = this.templateSrv.replace("" + target.dataFrequency, options.scopedVars);
+                    let agentRegex = target.agentRegex;
+                    let metricRegex = target.metricRegex;
+                    let dataFrequency = target.dataFrequency;
 
                     // escape common metric path characters ("|", "(", ")")
                     if (target.autoEscape){
                         agentRegex = this.escapeQueryString(agentRegex);
                         metricRegex = this.escapeQueryString(metricRegex);
                     }
+
+                    // replace variables, no escaping
+                    agentRegex = this.templateSrv.replace(agentRegex, options.scopedVars, 'regex');
+                    metricRegex = this.templateSrv.replace(metricRegex, options.scopedVars, 'regex');
+                    dataFrequency = this.templateSrv.replace("" + dataFrequency, options.scopedVars, 'regex');
 
                     let headers = {
                         "SOAPAction": "getMetricData",
