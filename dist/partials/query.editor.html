@@ -1,35 +1,35 @@
 <query-editor-row query-ctrl="ctrl" can-collapse="true" has-text-edit-mode="true">
 
-  <div ng-if="ctrl.target.rawQuery">
+  <div ng-if="ctrl.target.isRawQueryModeEnabled">
     <div class="gf-form">
       <label class="gf-form-label query-keyword width-7">Agent</label>
-      <input type="text" class="gf-form-input" ng-model="ctrl.target.agentRegex" spellcheck='false' placeholder="Agent RegEx" ng-blur="ctrl.refresh()">
+      <input type="text" class="gf-form-input" ng-model="ctrl.target.rawQuery.agentRegex" spellcheck='false' placeholder="Agent RegEx" ng-blur="ctrl.refresh()">
     </div>
     <div class="gf-form">
       <label class="gf-form-label query-keyword width-7">Metric</label>
-      <input type="text" class="gf-form-input" ng-model="ctrl.target.metricRegex" spellcheck='false' placeholder="Metric RegEx"
+      <input type="text" class="gf-form-input" ng-model="ctrl.target.rawQuery.metricRegex" spellcheck='false' placeholder="Metric RegEx"
         ng-blur="ctrl.refresh()">
     </div>
     <div class="gf-form">
-      <label class="gf-form-label query-keyword width-7">Frequency</label>
-      <input type="text" class="gf-form-input" ng-model="ctrl.target.dataFrequency" spellcheck='false' placeholder="Data Frequency"
+      <label class="gf-form-label query-keyword width-7">Resolution</label>
+      <input type="text" class="gf-form-input" ng-model="ctrl.target.rawQuery.temporalResolution" spellcheck='false' placeholder="Data Frequency"
         ng-blur="ctrl.refresh()">
     </div>
     <div class="gf-form-inline">
       <gf-form-switch class="gf-form" label="Auto-Escape Query Strings" tooltip="Toggle automatic escaping of agent and metric query strings. Disable for advanced RegEx. Escapes &quot;|&quot;, &quot;(&quot;, and &quot;)&quot;."
-        label-class="width-15" checked="ctrl.target.autoEscape" on-change="ctrl.panelCtrl.refresh()"></gf-form-switch>
+        label-class="width-15" checked="ctrl.target.rawQuery.isAutoEscapingEnabled" on-change="ctrl.panelCtrl.refresh()"></gf-form-switch>
       <div class="gf-form gf-form--grow">
         <div class="gf-form-label gf-form-label--grow"></div>
       </div>
     </div>
   </div>
 
-  <div ng-if="!ctrl.target.rawQuery">
+  <div ng-if="!ctrl.target.isRawQueryModeEnabled">
     <div class="gf-form-inline">
       <div class="gf-form">
         <label class="gf-form-label query-keyword width-7">Agent</label>
       </div>
-      <div class="gf-form" ng-repeat="agentSegment in ctrl.agentSegments" role="menuitem" class="gf-form">
+      <div class="gf-form" ng-repeat="agentSegment in ctrl.query.agentSegments" role="menuitem" class="gf-form">
         <metric-segment segment="agentSegment" get-options="ctrl.getAgentSegments($index)" on-change="ctrl.onAgentSegmentUpdate(agentSegment, $index)"></metric-segment>
       </div>
       <div class="gf-form gf-form--grow">
@@ -40,7 +40,7 @@
       <div class="gf-form">
         <label class="gf-form-label query-keyword width-7">Metric</label>
       </div>
-      <div class="gf-form" ng-repeat="metricSegment in ctrl.metricSegments" role="menuitem" class="gf-form">
+      <div class="gf-form" ng-repeat="metricSegment in ctrl.query.metricSegments" role="menuitem" class="gf-form">
         <metric-segment segment="metricSegment" get-options="ctrl.getMetricSegments($index)" on-change="ctrl.onMetricSegmentUpdate(metricSegment, $index)"></metric-segment>
       </div>
       <div class="gf-form gf-form--grow">
@@ -49,10 +49,10 @@
     </div>
     <div class="gf-form-inline">
       <div class="gf-form">
-        <label class="gf-form-label query-keyword width-7">Frequency</label>
+        <label class="gf-form-label query-keyword width-7">Resolution</label>
       </div>
       <div class="gf-form">
-        <gf-form-dropdown model="ctrl.frequency" allow-custom="true" label-mode="true" get-options="ctrl.getFrequencyOptions()" on-change="ctrl.onFrequencyUpdate()">
+        <gf-form-dropdown model="ctrl.temporalResolution" allow-custom="true" label-mode="true" get-options="ctrl.getFrequencyOptions()" on-change="ctrl.onFrequencyUpdate()">
         </gf-form-dropdown>
       </div>
       <div class="gf-form gf-form--grow">

@@ -1,5 +1,7 @@
 import x2js = require('./lib/xml2json.min.js');
+// @ts-ignore
 import * as kbn from 'app/core/utils/kbn';
+import ApmRawQuery from './apmrawquery'
 
 export class ApmDatasource {
 
@@ -22,24 +24,30 @@ export class ApmDatasource {
         const endTime = options.range.to.toISOString();
         const grafanaResponse = { data: [] };
 
-        const requests = options.targets.map((target) => {
+        const requests = options.targets.map((target: Target) => {
 
             return new Promise((resolve) => {
-                if (target.hide || !(target.agentRegex && target.metricRegex && target.dataFrequency)) {
+                if (target.hide || !target.rawQuery) {
                     resolve();
                 } else {
 
-                    let agentRegex = target.agentRegex;
-                    let metricRegex = target.metricRegex;
-                    let dataFrequency = target.dataFrequency;
+                    let query: ApmRawQuery = target.rawQuery;
+
+                    let agentRegex = "" || query.agentRegex;
+                    let metricRegex = "" || query.metricRegex;
+                    let dataFrequency = "" || query.temporalResolution;
+
+                    if (!(agentRegex && metricRegex && dataFrequency)) {
+                        resolve();
+                    }
 
                     // escape common metric path characters ("|", "(", ")")
-                    if (target.autoEscape){
+                    if (query.isAutoEscapingEnabled){
                         agentRegex = this.escapeQueryString(agentRegex);
                         metricRegex = this.escapeQueryString(metricRegex);
                     }
 
-                    // replace variables, no escaping
+                    // replace variables
                     agentRegex = this.templateSrv.replace(agentRegex, options.scopedVars, 'regex');
                     metricRegex = this.templateSrv.replace(metricRegex, options.scopedVars, 'regex');
                     dataFrequency = this.templateSrv.replace("" + dataFrequency, options.scopedVars, 'regex');
@@ -112,13 +120,13 @@ export class ApmDatasource {
     }
 
     private parseResponseData(responseData: string, grafanaResponse: any) {
-
+        let rawArray, returnCount;
         try {
             const jsonResponseData = this.x2js.xml_str2json(responseData);
             const returnArrayType = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn['_soapenc:arrayType']
             if (returnArrayType.slice(returnArrayType.length - 3) != '[0]') {
                 // response array is not empty
-                let rawArray, returnCount;
+                
                 rawArray = jsonResponseData.Envelope.Body.multiRef;
                 returnCount = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn.getMetricDataReturn.length;
             } else {
@@ -157,7 +165,7 @@ export class ApmDatasource {
         };
 
         // then collect the actual data points into a map
-        for (i = returnCount; i < rawArray.length; i++) {
+        for (let i = returnCount; i < rawArray.length; i++) {
 
             const rawMetricDataPoint = rawArray[i];
             const id = rawMetricDataPoint._id.split("id")[1];
@@ -179,7 +187,7 @@ export class ApmDatasource {
         // for each time slice, collect all referenced data points
         slices.forEach(function (slice) {
             slice.references.forEach(function (reference) {
-                const dataPoint = metricData[reference];
+                const dataPoint = metricData[reference] as MetricPoint;
                 metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] = metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] || [];
                 metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName].push([dataPoint.metricValue, Date.parse(slice.endTime)]);
             })
@@ -296,4 +304,16 @@ export class ApmDatasource {
             return [];
         });
     }
+}
+
+interface Target {
+    rawQuery: ApmRawQuery;
+    isRawQueryModeEnabled: boolean;
+    hide: boolean;
+}
+
+interface MetricPoint {
+    agentName: String;
+    metricName: String;
+    metricValue: String;
 }

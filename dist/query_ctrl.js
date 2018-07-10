@@ -10,7 +10,10 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+// @ts-ignore
 var sdk_1 = require("app/plugins/sdk");
+var apmquery_1 = require("./apmquery");
+var apmrawquery_1 = require("./apmrawquery");
 var ApmQueryCtrl = /** @class */ (function (_super) {
     __extends(ApmQueryCtrl, _super);
     function ApmQueryCtrl($scope, $injector, $q, uiSegmentSrv, templateSrv) {
@@ -18,51 +21,61 @@ var ApmQueryCtrl = /** @class */ (function (_super) {
         _this.$q = $q;
         _this.uiSegmentSrv = uiSegmentSrv;
         _this.templateSrv = templateSrv;
-        _this.frequencyOptions = ["15s", "30s", "1m", "2m", "6m", "12m", "24m", "48m", "1h", "168m", "12h"];
         _this.onMetricSegmentUpdate = function (metricSegment, segmentIndex) {
-            _this.updateSegments(_this.metricSegments, metricSegment, segmentIndex, "select metric");
-            _this.target.metricRegex = _this.getSegmentPathUpToIndex(_this.metricSegments, _this.metricSegments.length, false);
+            //this.updateSegments(this.metricSegments, metricSegment, segmentIndex, "select metric")
+            _this.query.updateMetricSegments(metricSegment, segmentIndex);
+            //this.target.metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, this.metricSegments.length, false);        
             _this.panelCtrl.refresh();
         };
         _this.onAgentSegmentUpdate = function (agentSegment, segmentIndex) {
-            _this.updateSegments(_this.agentSegments, agentSegment, segmentIndex, "select agent");
-            _this.target.agentRegex = _this.getSegmentPathUpToIndex(_this.agentSegments, _this.agentSegments.length, false);
+            //this.updateSegments(this.agentSegments, agentSegment, segmentIndex, "select agent")
+            _this.query.updateAgentSegments(agentSegment, segmentIndex);
+            //this.target.agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, false);
             _this.panelCtrl.refresh();
         };
         _this.uiSegmentSrv = uiSegmentSrv;
         _this.scope = $scope;
+        _this._target = _this.target;
         _this.parseTarget();
         return _this;
     }
     ApmQueryCtrl.prototype.toggleEditorMode = function () {
-        this.target.rawQuery = !this.target.rawQuery;
-        if (!this.target.rawQuery) {
+        if (!this._target.isRawQueryModeEnabled) {
             // set regex according to segments when switching back from raw query mode
-            this.target.metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, this.metricSegments.length, false);
-            this.target.agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, false);
-            this.panelCtrl.refresh();
+            //this.target.metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, this.metricSegments.length, false);
+            //this.target.agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, false);
+            this._target.rawQuery = this.query.cloneRawQuery();
         }
+        else {
+            this._target.rawQuery = this.query.getRawQuery();
+        }
+        this._target.isRawQueryModeEnabled = !this._target.isRawQueryModeEnabled;
+        this.panelCtrl.refresh();
     };
     ApmQueryCtrl.prototype.onChangeInternal = function () {
         this.panelCtrl.refresh();
     };
     ApmQueryCtrl.prototype.onFrequencyUpdate = function () {
-        this.target.dataFrequency = this.frequency;
+        //this.target.dataFrequency = this.frequency;
+        this.query.setTemporalResolution(this.temporalResolution);
         this.panelCtrl.refresh();
     };
     ApmQueryCtrl.prototype.getAgentSegments = function (index) {
-        var agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, index, true);
+        //const agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, index, true);
+        var agentRegex = this.query.getAgentRegex(index, true);
         return this.datasource.getAgentSegments(agentRegex)
             .then(this.transformPathToSegments(index));
     };
     ApmQueryCtrl.prototype.getMetricSegments = function (index) {
-        var agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, true);
-        var metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, index, false);
+        //const agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, true);
+        var agentRegex = this.query.getAgentRegex(null, true);
+        //const metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, index, false);
+        var metricRegex = this.query.getMetricRegex(index, false);
         return this.datasource.getMetricSegments(agentRegex, metricRegex)
             .then(this.transformPathToSegments(index));
     };
     ApmQueryCtrl.prototype.getFrequencyOptions = function () {
-        return this.frequencyOptions
+        return ApmQueryCtrl.frequencyOptions
             .concat(this.templateSrv.variables.filter(function (variable) {
             return variable.type === "interval";
         })
@@ -77,55 +90,32 @@ var ApmQueryCtrl = /** @class */ (function (_super) {
         });
     };
     ApmQueryCtrl.prototype.getCollapsedText = function () {
-        return "" + this.target.agentRegex + "|" + this.target.metricRegex + " [" + this.target.dataFrequency + "]";
+        if (!this._target.isRawQueryModeEnabled) {
+            return "" + this._target.rawQuery.agentRegex + "|" + this._target.rawQuery.metricRegex + " [" + this._target.rawQuery.temporalResolution + "]";
+        }
+        else {
+            return "" + this.query.getAgentRegex + "|" + this.query.getMetricRegex + " [" + this.query.getTemporalResolution + "]";
+        }
     };
     ApmQueryCtrl.prototype.parseTarget = function () {
-        var _this = this;
-        this.agentSegments = [];
-        this.metricSegments = [];
-        if (this.target.agentRegex) {
-            this.target.agentRegex.split('|').forEach(function (element, index, arr) {
-                var expandable = true;
-                if (index === arr.length - 1) {
-                    expandable = false;
-                }
-                var newSegment = _this.uiSegmentSrv.newSegment({
-                    value: element,
-                    expandable: expandable
-                });
-                _this.agentSegments.push(newSegment);
-            });
+        if (this._target.isRawQueryModeEnabled) {
+            if (!this._target.rawQuery) {
+                this._target.rawQuery = new apmrawquery_1.default();
+            }
+            this.query = new apmquery_1.ApmQuery(this.uiSegmentSrv);
+            this._target.queryModel = this.query.queryModel;
+            this.temporalResolution = this._target.rawQuery.temporalResolution || "select temporal resolution";
         }
         else {
-            this.agentSegments = [this.uiSegmentSrv.newSegment({
-                    value: "select agent",
-                    fake: true
-                })];
-        }
-        if (this.target.metricRegex) {
-            this.target.metricRegex.split(/[\|:]/).forEach(function (element, index, arr) {
-                var expandable = true;
-                if (index === arr.length - 1) {
-                    expandable = false;
-                }
-                var newSegment = _this.uiSegmentSrv.newSegment({
-                    value: element,
-                    expandable: expandable
-                });
-                _this.metricSegments.push(newSegment);
-            });
-        }
-        else {
-            this.metricSegments = [this.uiSegmentSrv.newSelectMetric()];
-        }
-        if (this.target.dataFrequency) {
-            this.frequency = this.target.dataFrequency;
-        }
-        else {
-            this.frequency = "select data frequency";
-        }
-        if (typeof this.target.autoEscape === 'undefined' || this.target.autoEscape === null) {
-            this.target.autoEscape = true;
+            if (!this._target.queryModel) {
+                this.query = new apmquery_1.ApmQuery(this.uiSegmentSrv);
+                this._target.queryModel = this.query.queryModel;
+            }
+            else {
+                this.query = new apmquery_1.ApmQuery(this.uiSegmentSrv, this._target.queryModel);
+            }
+            this._target.rawQuery = this.query.getRawQuery();
+            this.temporalResolution = this.query.getTemporalResolution() || "select temporal resolution";
         }
     };
     ApmQueryCtrl.prototype.transformPathToSegments = function (segmentIndex) {
@@ -174,47 +164,8 @@ var ApmQueryCtrl = /** @class */ (function (_super) {
             });
         };
     };
-    ApmQueryCtrl.prototype.updateSegments = function (segments, updatedSegment, updatedSegmentIndex, newSegmentLabel) {
-        // discard trailing segments if the updated segment does NOT end with a wildcard
-        // reasoning: most likely the trailing segments don't make any sense within the new context
-        if (updatedSegment.value.slice(-1) != '*') {
-            segments.length = updatedSegmentIndex + 1;
-        }
-        // if the updated segments ends with a wildcard, make it expandable
-        // reasoning: a wildcard segment might allow additional browsable path elements
-        if (updatedSegment.value.slice(-1) == '*') {
-            updatedSegment.expandable = true;
-        }
-        if (updatedSegmentIndex == segments.length - 1 && updatedSegment.expandable) {
-            segments.push(this.uiSegmentSrv.newSegment({
-                value: newSegmentLabel,
-                fake: true
-            }));
-        }
-    };
-    ApmQueryCtrl.prototype.getSegmentPathUpToIndex = function (segments, index, trailingSeparator) {
-        var segmentPath = '';
-        if (index > 0 && segments.length > 0) {
-            // we only need the segments up to the specified index
-            var slicedSegments = segments.slice(0, index);
-            // join segments using the "|" character
-            slicedSegments.forEach(function (segment, segmentIndex) {
-                if (!segment.fake) {
-                    if (segmentIndex === 0 || segment.value.indexOf(":") > -1) {
-                        segmentPath += segment.value;
-                    }
-                    else {
-                        segmentPath += "|" + segment.value;
-                    }
-                }
-            });
-            if (trailingSeparator && slicedSegments[slicedSegments.length - 1].expandable) {
-                segmentPath += "|";
-            }
-        }
-        return segmentPath;
-    };
     ApmQueryCtrl.templateUrl = 'partials/query.editor.html';
+    ApmQueryCtrl.frequencyOptions = ["15s", "30s", "1m", "2m", "6m", "12m", "24m", "48m", "1h", "168m", "12h"];
     return ApmQueryCtrl;
 }(sdk_1.QueryCtrl));
 exports.ApmQueryCtrl = ApmQueryCtrl;

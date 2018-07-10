@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var x2js = require("./lib/xml2json.min.js");
+// @ts-ignore
 var kbn = require("app/core/utils/kbn");
 var ApmDatasource = /** @class */ (function () {
     function ApmDatasource(instanceSettings, $q, backendSrv, templateSrv) {
@@ -20,19 +21,23 @@ var ApmDatasource = /** @class */ (function () {
         var grafanaResponse = { data: [] };
         var requests = options.targets.map(function (target) {
             return new Promise(function (resolve) {
-                if (target.hide || !(target.agentRegex && target.metricRegex && target.dataFrequency)) {
+                if (target.hide || !target.rawQuery) {
                     resolve();
                 }
                 else {
-                    var agentRegex = target.agentRegex;
-                    var metricRegex = target.metricRegex;
-                    var dataFrequency = target.dataFrequency;
+                    var query = target.rawQuery;
+                    var agentRegex = "" || query.agentRegex;
+                    var metricRegex = "" || query.metricRegex;
+                    var dataFrequency = "" || query.temporalResolution;
+                    if (!(agentRegex && metricRegex && dataFrequency)) {
+                        resolve();
+                    }
                     // escape common metric path characters ("|", "(", ")")
-                    if (target.autoEscape) {
+                    if (query.isAutoEscapingEnabled) {
                         agentRegex = _this.escapeQueryString(agentRegex);
                         metricRegex = _this.escapeQueryString(metricRegex);
                     }
-                    // replace variables, no escaping
+                    // replace variables
                     agentRegex = _this.templateSrv.replace(agentRegex, options.scopedVars, 'regex');
                     metricRegex = _this.templateSrv.replace(metricRegex, options.scopedVars, 'regex');
                     dataFrequency = _this.templateSrv.replace("" + dataFrequency, options.scopedVars, 'regex');
@@ -98,12 +103,12 @@ var ApmDatasource = /** @class */ (function () {
         });
     };
     ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse) {
+        var rawArray, returnCount;
         try {
             var jsonResponseData = this.x2js.xml_str2json(responseData);
             var returnArrayType = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn['_soapenc:arrayType'];
             if (returnArrayType.slice(returnArrayType.length - 3) != '[0]') {
                 // response array is not empty
-                var rawArray = void 0, returnCount = void 0;
                 rawArray = jsonResponseData.Envelope.Body.multiRef;
                 returnCount = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn.getMetricDataReturn.length;
             }
@@ -142,7 +147,7 @@ var ApmDatasource = /** @class */ (function () {
         }
         ;
         // then collect the actual data points into a map
-        for (i = returnCount; i < rawArray.length; i++) {
+        for (var i = returnCount; i < rawArray.length; i++) {
             var rawMetricDataPoint = rawArray[i];
             var id = rawMetricDataPoint._id.split("id")[1];
             var value = null;
