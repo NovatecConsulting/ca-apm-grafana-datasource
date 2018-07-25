@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var x2js = require("./lib/xml2json.min.js");
 // @ts-ignore
 var kbn = require("app/core/utils/kbn");
 var ApmDatasource = /** @class */ (function () {
@@ -11,8 +10,10 @@ var ApmDatasource = /** @class */ (function () {
         this.soapHead = '<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:met=\"http://metricslist.webservicesimpl.server.introscope.wily.com\"><soapenv:Header/><soapenv:Body>';
         this.soapTail = '</soapenv:Body></soapenv:Envelope>';
         this.url = instanceSettings.url;
-        this.x2js = new x2js();
         this.templateSrv = templateSrv;
+        if (window.DOMParser) {
+            this.parser = new DOMParser();
+        }
     }
     ApmDatasource.prototype.query = function (options) {
         var _this = this;
@@ -103,14 +104,15 @@ var ApmDatasource = /** @class */ (function () {
         });
     };
     ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse) {
-        var rawArray, returnCount;
+        //let rawArray;
+        var returnCount;
+        var rawArray;
         try {
-            var jsonResponseData = this.x2js.xml_str2json(responseData);
-            var returnArrayType = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn['_soapenc:arrayType'];
-            if (returnArrayType.slice(returnArrayType.length - 3) != '[0]') {
+            var xml = this.parser.parseFromString(responseData, "text/xml");
+            returnCount = xml.getElementsByTagName("ns1:getMetricDataResponse")[0].childNodes[0].childNodes.length;
+            if (returnCount != 0) {
                 // response array is not empty
-                rawArray = jsonResponseData.Envelope.Body.multiRef;
-                returnCount = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn.getMetricDataReturn.length;
+                rawArray = xml.getElementsByTagName("multiRef");
             }
             else {
                 // response array was empty
@@ -130,35 +132,30 @@ var ApmDatasource = /** @class */ (function () {
         // first process the time slices
         for (var i = 0; i < returnCount; i++) {
             var slice = rawArray[i];
-            if (slice.metricData.metricData.constructor === Array) {
-                references = slice.metricData.metricData.map(function (x) {
-                    return x._href.split("#id")[1];
-                });
-            }
-            else {
-                references = [slice.metricData.metricData._href.split("#id")[1]];
-            }
+            references = [];
+            slice.childNodes[0].childNodes.forEach(function (x) {
+                references.push(+x.getAttribute("href").split("#id")[1]);
+            });
             slices.push({
                 id: i + 1,
                 references: references,
-                startTime: slice.timesliceStartTime.__text,
-                endTime: slice.timesliceEndTime.__text
+                endTime: Date.parse(slice.childNodes[1].innerHTML)
             });
         }
         ;
         // then collect the actual data points into a map
         for (var i = returnCount; i < rawArray.length; i++) {
             var rawMetricDataPoint = rawArray[i];
-            var id = rawMetricDataPoint._id.split("id")[1];
+            var id = rawMetricDataPoint.getAttribute("id").split("id")[1];
             var value = null;
-            // handle missing values explicitly
-            if (!(rawMetricDataPoint.metricValue["_xsi:nil"] === "true")) {
+            // handle missing values explicitly           
+            if (!(rawMetricDataPoint.childNodes[3].getAttribute("xsi:nil") === "true")) {
                 // we have a value, convert to int implicitly
-                value = +rawMetricDataPoint.metricValue.__text;
+                value = +rawMetricDataPoint.childNodes[3].innerHTML;
             }
             metricData[id] = {
-                agentName: rawMetricDataPoint.agentName.__text,
-                metricName: rawMetricDataPoint.metricName.__text,
+                agentName: rawMetricDataPoint.childNodes[0].innerHTML,
+                metricName: rawMetricDataPoint.childNodes[1].innerHTML,
                 metricValue: value
             };
         }
@@ -168,7 +165,7 @@ var ApmDatasource = /** @class */ (function () {
             slice.references.forEach(function (reference) {
                 var dataPoint = metricData[reference];
                 metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] = metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] || [];
-                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName].push([dataPoint.metricValue, Date.parse(slice.endTime)]);
+                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName].push([dataPoint.metricValue, slice.endTime]);
             });
         });
         // sort the data points for proper line display in Grafana and add all series to the response
@@ -217,17 +214,12 @@ var ApmDatasource = /** @class */ (function () {
                 + "</agentRegex></met:listAgents></soapenv:Body></soapenv:Envelope>"
         }).then(function (response) {
             if (response.status === 200) {
-                var json = _this.x2js.xml_str2json(response.data);
-                var agentPaths = [];
-                if (json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn.constructor === Array) {
-                    for (var i = 0; i < json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn.length; i++) {
-                        agentPaths.push(json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn[i].__text);
-                    }
-                }
-                else {
-                    agentPaths.push(json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn.__text);
-                }
-                return agentPaths;
+                var xml = _this.parser.parseFromString(response.data, "text/xml");
+                var agentPaths_1 = [];
+                xml.getElementsByTagName("ns1:listAgentsResponse")[0].childNodes[0].childNodes.forEach(function (x) {
+                    agentPaths_1.push(x.textContent);
+                });
+                return agentPaths_1;
             }
             else {
                 return [];
@@ -258,15 +250,12 @@ var ApmDatasource = /** @class */ (function () {
                 + "</metricRegex></met:listMetrics></soapenv:Body></soapenv:Envelope>"
         }).then(function (response) {
             if (response.status === 200) {
-                var json = _this.x2js.xml_str2json(response.data);
                 var metricPaths = [];
-                if (json.Envelope.Body.multiRef.constructor === Array) {
-                    for (var i = 0; i < json.Envelope.Body.multiRef.length; i++) {
-                        metricPaths.push(json.Envelope.Body.multiRef[i].metricName.__text);
-                    }
-                }
-                else {
-                    metricPaths.push(json.Envelope.Body.multiRef.metricName.__text);
+                var xml = _this.parser.parseFromString(response.data, "text/xml");
+                var collection = xml.getElementsByTagName("multiRef");
+                for (var i = 0; i < collection.length; i++) {
+                    var item = collection.item(i);
+                    metricPaths.push(item.childNodes[1].textContent);
                 }
                 return metricPaths;
             }

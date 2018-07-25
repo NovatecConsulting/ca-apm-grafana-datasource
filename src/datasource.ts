@@ -1,4 +1,3 @@
-import x2js = require('./lib/xml2json.min.js');
 // @ts-ignore
 import * as kbn from 'app/core/utils/kbn';
 import ApmRawQuery from './apmrawquery'
@@ -7,6 +6,7 @@ export class ApmDatasource {
 
     url: string;
     x2js: any;
+    parser: any;
 
     soapHead: string = '<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:met=\"http://metricslist.webservicesimpl.server.introscope.wily.com\"><soapenv:Header/><soapenv:Body>';
     soapTail: string= '</soapenv:Body></soapenv:Envelope>';
@@ -14,8 +14,11 @@ export class ApmDatasource {
     constructor(instanceSettings, private $q, private backendSrv, private templateSrv) {
         
         this.url = instanceSettings.url;
-        this.x2js = new x2js();
         this.templateSrv = templateSrv;
+
+        if ((<any>window).DOMParser) {
+            this.parser = new DOMParser();
+        }
     }
 
     query(options) {
@@ -68,7 +71,7 @@ export class ApmDatasource {
                         method: 'POST',
                         headers: headers,
                         data: this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
-                    }).then((response) => {
+                    }).then((response) => {                        
                         this.parseResponseData(response.data, grafanaResponse);
                         resolve();
                     })
@@ -120,15 +123,17 @@ export class ApmDatasource {
     }
 
     private parseResponseData(responseData: string, grafanaResponse: any) {
-        let rawArray, returnCount;
+        //let rawArray;
+        let returnCount: number;
+        let rawArray;
         try {
-            const jsonResponseData = this.x2js.xml_str2json(responseData);
-            const returnArrayType = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn['_soapenc:arrayType']
-            if (returnArrayType.slice(returnArrayType.length - 3) != '[0]') {
+
+            const xml = this.parser.parseFromString(responseData, "text/xml");
+            returnCount = xml.getElementsByTagName("ns1:getMetricDataResponse")[0].childNodes[0].childNodes.length;
+
+            if (returnCount != 0) {
                 // response array is not empty
-                
-                rawArray = jsonResponseData.Envelope.Body.multiRef;
-                returnCount = jsonResponseData.Envelope.Body.getMetricDataResponse.getMetricDataReturn.getMetricDataReturn.length;
+                rawArray = xml.getElementsByTagName("multiRef")
             } else {
                 // response array was empty
                 return grafanaResponse;
@@ -147,39 +152,37 @@ export class ApmDatasource {
 
         // first process the time slices
         for (let i = 0; i < returnCount; i++) {
+
             const slice = rawArray[i];
-            if (slice.metricData.metricData.constructor === Array) {
-                references = slice.metricData.metricData.map(function (x) {
-                    return x._href.split("#id")[1];
-                });
-            } else {
-                references = [slice.metricData.metricData._href.split("#id")[1]];
-            }
+            references = [];
+
+            slice.childNodes[0].childNodes.forEach(function (x) {
+                references.push(+x.getAttribute("href").split("#id")[1]);
+            })
 
             slices.push({
                 id: i + 1,
                 references: references,
-                startTime: slice.timesliceStartTime.__text,
-                endTime: slice.timesliceEndTime.__text
+                endTime: Date.parse(slice.childNodes[1].innerHTML)
             })
         };
-
+        
         // then collect the actual data points into a map
         for (let i = returnCount; i < rawArray.length; i++) {
 
             const rawMetricDataPoint = rawArray[i];
-            const id = rawMetricDataPoint._id.split("id")[1];
+            const id = rawMetricDataPoint.getAttribute("id").split("id")[1];
             let value = null;
 
-            // handle missing values explicitly
-            if (!(rawMetricDataPoint.metricValue["_xsi:nil"] === "true")) {
+            // handle missing values explicitly           
+            if (!(rawMetricDataPoint.childNodes[3].getAttribute("xsi:nil") === "true")) {
                 // we have a value, convert to int implicitly
-                value = +rawMetricDataPoint.metricValue.__text
+                value = +rawMetricDataPoint.childNodes[3].innerHTML;
             }
 
             metricData[id] = {
-                agentName: rawMetricDataPoint.agentName.__text,
-                metricName: rawMetricDataPoint.metricName.__text,
+                agentName: rawMetricDataPoint.childNodes[0].innerHTML,
+                metricName: rawMetricDataPoint.childNodes[1].innerHTML,
                 metricValue: value
             }
         };
@@ -189,7 +192,7 @@ export class ApmDatasource {
             slice.references.forEach(function (reference) {
                 const dataPoint = metricData[reference] as MetricPoint;
                 metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] = metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] || [];
-                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName].push([dataPoint.metricValue, Date.parse(slice.endTime)]);
+                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName].push([dataPoint.metricValue, slice.endTime]);
             })
         })
 
@@ -242,16 +245,12 @@ export class ApmDatasource {
                 + "</agentRegex></met:listAgents></soapenv:Body></soapenv:Envelope>"
         }).then((response) => {
             if (response.status === 200) {
-                const json = this.x2js.xml_str2json(response.data);
+                const xml = this.parser.parseFromString(response.data, "text/xml");
                 const agentPaths = [];
 
-                if (json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn.constructor === Array) {
-                    for (let i = 0; i < json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn.length; i++) {
-                        agentPaths.push(json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn[i].__text);
-                    }
-                } else {
-                    agentPaths.push(json.Envelope.Body.listAgentsResponse.listAgentsReturn.listAgentsReturn.__text)
-                }
+                xml.getElementsByTagName("ns1:listAgentsResponse")[0].childNodes[0].childNodes.forEach(function (x) {
+                    agentPaths.push(x.textContent);
+                });
 
                 return agentPaths;
             } else {
@@ -284,15 +283,14 @@ export class ApmDatasource {
                 + "</metricRegex></met:listMetrics></soapenv:Body></soapenv:Envelope>"
         }).then((response) => {
             if (response.status === 200) {
-                const json = this.x2js.xml_str2json(response.data);
-                const metricPaths = [];
+                const metricPaths = [];                
+                const xml = this.parser.parseFromString(response.data, "text/xml");
 
-                if (json.Envelope.Body.multiRef.constructor === Array) {
-                    for (let i = 0; i < json.Envelope.Body.multiRef.length; i++) {
-                        metricPaths.push(json.Envelope.Body.multiRef[i].metricName.__text);
-                    }
-                } else {
-                    metricPaths.push(json.Envelope.Body.multiRef.metricName.__text);
+                const collection = xml.getElementsByTagName("multiRef");
+
+                for(let i = 0; i < collection.length; i++) {
+                    const item = collection.item(i);
+                    metricPaths.push(item.childNodes[1].textContent);
                 }
 
                 return metricPaths;
