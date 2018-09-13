@@ -22,15 +22,11 @@ var ApmQueryCtrl = /** @class */ (function (_super) {
         _this.uiSegmentSrv = uiSegmentSrv;
         _this.templateSrv = templateSrv;
         _this.onMetricSegmentUpdate = function (metricSegment, segmentIndex) {
-            //this.updateSegments(this.metricSegments, metricSegment, segmentIndex, "select metric")
             _this.query.updateMetricSegments(metricSegment, segmentIndex);
-            //this.target.metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, this.metricSegments.length, false);        
             _this.panelCtrl.refresh();
         };
         _this.onAgentSegmentUpdate = function (agentSegment, segmentIndex) {
-            //this.updateSegments(this.agentSegments, agentSegment, segmentIndex, "select agent")
             _this.query.updateAgentSegments(agentSegment, segmentIndex);
-            //this.target.agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, false);
             _this.panelCtrl.refresh();
         };
         _this.uiSegmentSrv = uiSegmentSrv;
@@ -41,9 +37,7 @@ var ApmQueryCtrl = /** @class */ (function (_super) {
     }
     ApmQueryCtrl.prototype.toggleEditorMode = function () {
         if (!this._target.isRawQueryModeEnabled) {
-            // set regex according to segments when switching back from raw query mode
-            //this.target.metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, this.metricSegments.length, false);
-            //this.target.agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, false);
+            // set regex according to query model segments when switching back from raw query mode
             this._target.rawQuery = this.query.cloneRawQuery();
         }
         else {
@@ -56,20 +50,16 @@ var ApmQueryCtrl = /** @class */ (function (_super) {
         this.panelCtrl.refresh();
     };
     ApmQueryCtrl.prototype.onFrequencyUpdate = function () {
-        //this.target.dataFrequency = this.frequency;
         this.query.setTemporalResolution(this.temporalResolution);
         this.panelCtrl.refresh();
     };
     ApmQueryCtrl.prototype.getAgentSegments = function (index) {
-        //const agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, index, true);
         var agentRegex = this.query.getAgentRegex(index, true);
         return this.datasource.getAgentSegments(agentRegex)
             .then(this.transformPathToSegments(index));
     };
     ApmQueryCtrl.prototype.getMetricSegments = function (index) {
-        //const agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, true);
         var agentRegex = this.query.getAgentRegex(null, true);
-        //const metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, index, false);
         var metricRegex = this.query.getMetricRegex(index, false);
         return this.datasource.getMetricSegments(agentRegex, metricRegex)
             .then(this.transformPathToSegments(index));
@@ -90,12 +80,33 @@ var ApmQueryCtrl = /** @class */ (function (_super) {
         });
     };
     ApmQueryCtrl.prototype.getCollapsedText = function () {
-        if (!this._target.isRawQueryModeEnabled) {
-            return "" + this._target.rawQuery.agentRegex + "|" + this._target.rawQuery.metricRegex + " [" + this._target.rawQuery.temporalResolution + "]";
+        var agentRegex, metricRegex, temporalResolution;
+        if (this._target.isRawQueryModeEnabled) {
+            var query = this._target.rawQuery;
+            agentRegex = query.agentRegex;
+            metricRegex = query.metricRegex;
+            temporalResolution = query.temporalResolution;
         }
         else {
-            return "" + this.query.getAgentRegex + "|" + this.query.getMetricRegex + " [" + this.query.getTemporalResolution + "]";
+            var query = this.query;
+            agentRegex = query.getAgentRegex();
+            metricRegex = query.getMetricRegex();
+            temporalResolution = query.getTemporalResolution();
         }
+        var collapsedText = "";
+        if (agentRegex) {
+            collapsedText += agentRegex;
+        }
+        if (metricRegex) {
+            if (agentRegex) {
+                collapsedText += "|";
+            }
+            collapsedText += metricRegex;
+        }
+        if (temporalResolution) {
+            collapsedText += "[" + temporalResolution + "]";
+        }
+        return collapsedText;
     };
     ApmQueryCtrl.prototype.parseTarget = function () {
         if (this._target.isRawQueryModeEnabled) {

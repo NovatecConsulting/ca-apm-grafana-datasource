@@ -43,6 +43,8 @@ var ApmQuery = /** @class */ (function () {
         this.rawQuery.temporalResolution = temporalResolution;
     };
     ApmQuery.prototype.getAgentRegex = function (segmentIndex, trailingSeparator) {
+        segmentIndex = segmentIndex ? segmentIndex : this.agentSegments.length;
+        trailingSeparator = trailingSeparator ? trailingSeparator : false;
         var segmentPath = '';
         if (segmentIndex > 0 && this.agentSegments.length > 0) {
             // we only need the segments up to the specified index
@@ -65,6 +67,8 @@ var ApmQuery = /** @class */ (function () {
         return segmentPath;
     };
     ApmQuery.prototype.getMetricRegex = function (segmentIndex, trailingSeparator) {
+        segmentIndex = segmentIndex ? segmentIndex : this.metricSegments.length;
+        trailingSeparator = trailingSeparator ? trailingSeparator : false;
         var segmentPath = '';
         if (segmentIndex > 0 && this.metricSegments.length > 0) {
             // we only need the segments up to the specified index

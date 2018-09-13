@@ -35,9 +35,7 @@ export class ApmQueryCtrl extends QueryCtrl {
 
     toggleEditorMode() {        
         if (!this._target.isRawQueryModeEnabled) {
-            // set regex according to segments when switching back from raw query mode
-            //this.target.metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, this.metricSegments.length, false);
-            //this.target.agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, false);
+            // set regex according to query model segments when switching back from raw query mode
             this._target.rawQuery = this.query.cloneRawQuery();
         } else {
             this._target.rawQuery = this.query.getRawQuery();
@@ -50,37 +48,29 @@ export class ApmQueryCtrl extends QueryCtrl {
         this.panelCtrl.refresh();
     }
 
-    onMetricSegmentUpdate = (metricSegment, segmentIndex) => {        
-        //this.updateSegments(this.metricSegments, metricSegment, segmentIndex, "select metric")
+    onMetricSegmentUpdate = (metricSegment, segmentIndex) => {
         this.query.updateMetricSegments(metricSegment, segmentIndex);
-        //this.target.metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, this.metricSegments.length, false);        
         this.panelCtrl.refresh();
     }
 
     onAgentSegmentUpdate = (agentSegment, segmentIndex) => {
-        //this.updateSegments(this.agentSegments, agentSegment, segmentIndex, "select agent")
         this.query.updateAgentSegments(agentSegment, segmentIndex);
-        //this.target.agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, false);
         this.panelCtrl.refresh();
     }
 
     onFrequencyUpdate() {        
-        //this.target.dataFrequency = this.frequency;
         this.query.setTemporalResolution(this.temporalResolution);
         this.panelCtrl.refresh();
     }
 
     getAgentSegments(index) {
-        //const agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, index, true);
         const agentRegex = this.query.getAgentRegex(index, true);
         return this.datasource.getAgentSegments(agentRegex)
             .then(this.transformPathToSegments(index));
     }
 
     getMetricSegments(index) {
-        //const agentRegex = this.getSegmentPathUpToIndex(this.agentSegments, this.agentSegments.length, true);
         const agentRegex = this.query.getAgentRegex(null, true);
-        //const metricRegex = this.getSegmentPathUpToIndex(this.metricSegments, index, false);
         const metricRegex = this.query.getMetricRegex(index, false);
         return this.datasource.getMetricSegments(agentRegex, metricRegex)
             .then(this.transformPathToSegments(index));
@@ -104,11 +94,37 @@ export class ApmQueryCtrl extends QueryCtrl {
     }
 
     getCollapsedText() {
-        if (!this._target.isRawQueryModeEnabled) {
-            return "" + this._target.rawQuery.agentRegex + "|" + this._target.rawQuery.metricRegex + " [" + this._target.rawQuery.temporalResolution + "]"
+
+        var agentRegex, metricRegex, temporalResolution: String
+
+        if (this._target.isRawQueryModeEnabled) {
+            const query = this._target.rawQuery
+            agentRegex = query.agentRegex
+            metricRegex = query.metricRegex
+            temporalResolution = query.temporalResolution
         } else {
-            return "" + this.query.getAgentRegex + "|" + this.query.getMetricRegex + " [" + this.query.getTemporalResolution + "]"
+            const query = this.query
+            agentRegex = query.getAgentRegex()
+            metricRegex = query.getMetricRegex()
+            temporalResolution = query.getTemporalResolution()
         }
+
+        var collapsedText = ""
+
+        if (agentRegex) {
+            collapsedText += agentRegex;
+        }
+        if (metricRegex) {
+            if (agentRegex) {
+                collapsedText += "|";
+            }
+            collapsedText += metricRegex;
+        }
+        if (temporalResolution) {
+            collapsedText += "[" + temporalResolution + "]";
+        }
+
+        return collapsedText;
     }
 
     private parseTarget() {

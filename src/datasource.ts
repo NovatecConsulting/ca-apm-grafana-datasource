@@ -5,7 +5,6 @@ import ApmRawQuery from './apmrawquery'
 export class ApmDatasource {
 
     url: string;
-    x2js: any;
     parser: any;
 
     soapHead: string = '<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:met=\"http://metricslist.webservicesimpl.server.introscope.wily.com\"><soapenv:Header/><soapenv:Body>';
@@ -112,8 +111,8 @@ export class ApmDatasource {
             
         }).then((response) => {            
             if (response.status === 200) {
-                const jsonResponseData = this.x2js.xml_str2json(response.data);
-                if (jsonResponseData.definitions.service._name === "MetricsDataService") {
+                const xml = this.parser.parseFromString(response.data, "text/xml");
+                if (xml.getElementsByTagName("wsdl:service")[0].getAttribute("name") === "MetricsDataService") {
                     return { status: 'success', message: 'Data source is working, found Metrics Data Web Service', title: 'Success' };
                 }
             }
@@ -163,7 +162,7 @@ export class ApmDatasource {
             slices.push({
                 id: i + 1,
                 references: references,
-                endTime: Date.parse(slice.childNodes[1].innerHTML)
+                endTime: Date.parse(slice.childNodes[1].textContent)
             })
         };
         
@@ -177,12 +176,12 @@ export class ApmDatasource {
             // handle missing values explicitly           
             if (!(rawMetricDataPoint.childNodes[3].getAttribute("xsi:nil") === "true")) {
                 // we have a value, convert to int implicitly
-                value = +rawMetricDataPoint.childNodes[3].innerHTML;
+                value = +rawMetricDataPoint.childNodes[3].textContent;
             }
 
             metricData[id] = {
-                agentName: rawMetricDataPoint.childNodes[0].innerHTML,
-                metricName: rawMetricDataPoint.childNodes[1].innerHTML,
+                agentName: rawMetricDataPoint.childNodes[0].textContent,
+                metricName: rawMetricDataPoint.childNodes[1].textContent,
                 metricValue: value
             }
         };
