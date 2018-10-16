@@ -47,7 +47,7 @@ Considering the different temporal aggregation levels of CA APM, it makes sense 
 
 ## License
 
-Copyright (c) 2017 NovaTec Consulting GmbH. All rights reserved.
+Copyright (c) 2017 Novatec Consulting GmbH. All rights reserved.
 
 Licensed under the [MIT](LICENSE.md) License.
 
