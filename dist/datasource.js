@@ -133,9 +133,10 @@ var ApmDatasource = /** @class */ (function () {
         for (var i = 0; i < returnCount; i++) {
             var slice = rawArray[i];
             references = [];
-            slice.childNodes[0].childNodes.forEach(function (x) {
-                references.push(+x.getAttribute("href").split("#id")[1]);
-            });
+            // for IE compatibility, don't use forEach here
+            for (var j = 0; j < slice.childNodes[0].childNodes.length; j++) {
+                references.push(+slice.childNodes[0].childNodes[j].getAttribute("href").split("#id")[1]);
+            }
             slices.push({
                 id: i + 1,
                 references: references,
