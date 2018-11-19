@@ -153,11 +153,12 @@ export class ApmDatasource {
         for (let i = 0; i < returnCount; i++) {
 
             const slice = rawArray[i];
+            const rawReferences = slice.childNodes[0].childNodes;
             references = [];
 
             // for IE compatibility, don't use forEach here
-            for(let j = 0; j < slice.childNodes[0].childNodes.length; j++) {
-                references.push(+slice.childNodes[0].childNodes[j].getAttribute("href").split("#id")[1]);
+            for(let j = 0; j < rawReferences.length; j++) {
+                references.push(+rawReferences[j].getAttribute("href").split("#id")[1]);
             }
 
             slices.push({
@@ -244,13 +245,15 @@ export class ApmDatasource {
                 + ".*"
                 + "</agentRegex></met:listAgents></soapenv:Body></soapenv:Envelope>"
         }).then((response) => {
-            if (response.status === 200) {
+            if (response.status === 200) {                
                 const xml = this.parser.parseFromString(response.data, "text/xml");
-                const agentPaths = [];
+                const agentPaths = [];                
+                const rawAgentPaths = xml.getElementsByTagName("ns1:listAgentsResponse")[0].childNodes[0].childNodes;
 
-                xml.getElementsByTagName("ns1:listAgentsResponse")[0].childNodes[0].childNodes.forEach(function (x) {
-                    agentPaths.push(x.textContent);
-                });
+                // for IE compatibility, don't use forEach here
+                for(let i = 0; i < rawAgentPaths.length; i++) {
+                    agentPaths.push(rawAgentPaths[i].textContent);
+                }
 
                 return agentPaths;
             } else {

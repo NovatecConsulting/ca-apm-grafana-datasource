@@ -132,10 +132,11 @@ var ApmDatasource = /** @class */ (function () {
         // first process the time slices
         for (var i = 0; i < returnCount; i++) {
             var slice = rawArray[i];
+            var rawReferences = slice.childNodes[0].childNodes;
             references = [];
             // for IE compatibility, don't use forEach here
-            for (var j = 0; j < slice.childNodes[0].childNodes.length; j++) {
-                references.push(+slice.childNodes[0].childNodes[j].getAttribute("href").split("#id")[1]);
+            for (var j = 0; j < rawReferences.length; j++) {
+                references.push(+rawReferences[j].getAttribute("href").split("#id")[1]);
             }
             slices.push({
                 id: i + 1,
@@ -216,11 +217,13 @@ var ApmDatasource = /** @class */ (function () {
         }).then(function (response) {
             if (response.status === 200) {
                 var xml = _this.parser.parseFromString(response.data, "text/xml");
-                var agentPaths_1 = [];
-                xml.getElementsByTagName("ns1:listAgentsResponse")[0].childNodes[0].childNodes.forEach(function (x) {
-                    agentPaths_1.push(x.textContent);
-                });
-                return agentPaths_1;
+                var agentPaths = [];
+                var rawAgentPaths = xml.getElementsByTagName("ns1:listAgentsResponse")[0].childNodes[0].childNodes;
+                // for IE compatibility, don't use forEach here
+                for (var i = 0; i < rawAgentPaths.length; i++) {
+                    agentPaths.push(rawAgentPaths[i].textContent);
+                }
+                return agentPaths;
             }
             else {
                 return [];
