@@ -153,7 +153,7 @@ export class ApmDatasource {
             mean: metricValues => metricValues.reduce((sum, metricValue) => sum += metricValue, 0) / metricValues.length,
             max: metricValues => metricValues.reduce((a, b) => Math.max(a, b)),
             min: metricValues => metricValues.reduce((a, b) => Math.min(a, b)),
-            median: metricValues => console.log("not implemented yet")
+            median: metricValues => this.quickselect_median(metricValues)
         };
         let references: Array<any>;
 
@@ -322,6 +322,47 @@ export class ApmDatasource {
             console.log(error)
             return [];
         });
+    }
+
+    // Source:
+    // https://rcoh.me/posts/linear-time-median-finding/
+    private quickselect_median(numbers: number[]) {
+        if (numbers.length % 2 == 1) {
+            return this.quickselect(numbers, numbers.length / 2);
+        } else {
+            return 0.5 * (this.quickselect(numbers, numbers.length / 2 - 1) +
+                          this.quickselect(numbers, numbers.length / 2));
+        }
+    }
+
+    private quickselect(numbers: number[], elementIndex: number) {
+    
+        if (numbers.length == 1) {
+            return numbers[0];
+        }        
+
+        const pivot = numbers[Math.floor((Math.random()*numbers.length))];
+        const lows: number[] = [];
+        const highs: number[] = [];
+        const pivots: number[] = [];
+
+        numbers.forEach((number: number) => {
+            if (number < pivot) {
+                lows.push(number);
+            } else if (number == pivot) {
+                pivots.push(number);
+            } else {
+                highs.push(number);
+            }
+        });
+
+        if (elementIndex < lows.length) {
+            return this.quickselect(lows, elementIndex);
+        } else if (elementIndex < (lows.length + pivots.length)) {
+            return pivots[0];
+        } else {
+            return this.quickselect(highs, elementIndex - lows.length - pivots.length);
+        }
     }
 }
 

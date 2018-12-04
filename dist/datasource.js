@@ -105,6 +105,7 @@ var ApmDatasource = /** @class */ (function () {
         });
     };
     ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, aggregationMode) {
+        var _this = this;
         //let rawArray;
         var returnCount;
         var rawArray;
@@ -134,7 +135,7 @@ var ApmDatasource = /** @class */ (function () {
             mean: function (metricValues) { return metricValues.reduce(function (sum, metricValue) { return sum += metricValue; }, 0) / metricValues.length; },
             max: function (metricValues) { return metricValues.reduce(function (a, b) { return Math.max(a, b); }); },
             min: function (metricValues) { return metricValues.reduce(function (a, b) { return Math.min(a, b); }); },
-            median: function (metricValues) { return console.log("not implemented yet"); }
+            median: function (metricValues) { return _this.quickselect_median(metricValues); }
         };
         var references;
         // first process the time slices
@@ -285,6 +286,46 @@ var ApmDatasource = /** @class */ (function () {
             console.log(error);
             return [];
         });
+    };
+    // Source:
+    // https://rcoh.me/posts/linear-time-median-finding/
+    ApmDatasource.prototype.quickselect_median = function (numbers) {
+        if (numbers.length % 2 == 1) {
+            return this.quickselect(numbers, numbers.length / 2);
+        }
+        else {
+            return 0.5 * (this.quickselect(numbers, numbers.length / 2 - 1) +
+                this.quickselect(numbers, numbers.length / 2));
+        }
+    };
+    ApmDatasource.prototype.quickselect = function (numbers, elementIndex) {
+        if (numbers.length == 1) {
+            return numbers[0];
+        }
+        var pivot = numbers[Math.floor((Math.random() * numbers.length))];
+        var lows = [];
+        var highs = [];
+        var pivots = [];
+        numbers.forEach(function (number) {
+            if (number < pivot) {
+                lows.push(number);
+            }
+            else if (number == pivot) {
+                pivots.push(number);
+            }
+            else {
+                highs.push(number);
+            }
+        });
+        if (elementIndex < lows.length) {
+            return this.quickselect(lows, elementIndex);
+        }
+        else if (elementIndex < (lows.length + pivots.length)) {
+            return pivots[0];
+        }
+        else {
+            return this.quickselect(highs, elementIndex - lows.length - pivots.length);
+        }
     };
     return ApmDatasource;
 }());
