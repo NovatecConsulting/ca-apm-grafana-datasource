@@ -6,6 +6,7 @@ var ApmRawQuery = /** @class */ (function () {
         this.metricRegex = "";
         this.temporalResolution = "";
         this.isAutoEscapingEnabled = true;
+        this.aggregationMode = "none";
     }
     return ApmRawQuery;
 }());

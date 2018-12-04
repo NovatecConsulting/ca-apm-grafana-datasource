@@ -30,6 +30,7 @@ var ApmDatasource = /** @class */ (function () {
                     var agentRegex = "" || query.agentRegex;
                     var metricRegex = "" || query.metricRegex;
                     var dataFrequency = "" || query.temporalResolution;
+                    var aggregationMode_1 = "" || query.aggregationMode;
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
                     }
@@ -57,7 +58,7 @@ var ApmDatasource = /** @class */ (function () {
                         headers: headers,
                         data: _this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
                     }).then(function (response) {
-                        _this.parseResponseData(response.data, grafanaResponse);
+                        _this.parseResponseData(response.data, grafanaResponse, aggregationMode_1);
                         resolve();
                     });
                 }
@@ -103,7 +104,7 @@ var ApmDatasource = /** @class */ (function () {
             return { status: 'failure', message: 'Data source is not working: ' + response.status, title: 'Failure' };
         });
     };
-    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse) {
+    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, aggregationMode) {
         //let rawArray;
         var returnCount;
         var rawArray;
@@ -128,6 +129,13 @@ var ApmDatasource = /** @class */ (function () {
         var metricData = {};
         var metrics = {};
         var legendSeparator = "|";
+        var aggregations = {
+            sum: function (metricValues) { return metricValues.reduce(function (sum, metricValue) { return sum += metricValue; }, 0); },
+            mean: function (metricValues) { return metricValues.reduce(function (sum, metricValue) { return sum += metricValue; }, 0) / metricValues.length; },
+            max: function (metricValues) { return metricValues.reduce(function (a, b) { return Math.max(a, b); }); },
+            min: function (metricValues) { return metricValues.reduce(function (a, b) { return Math.min(a, b); }); },
+            median: function (metricValues) { return console.log("not implemented yet"); }
+        };
         var references;
         // first process the time slices
         for (var i = 0; i < returnCount; i++) {
@@ -156,20 +164,27 @@ var ApmDatasource = /** @class */ (function () {
                 value = +rawMetricDataPoint.childNodes[3].textContent;
             }
             metricData[id] = {
-                agentName: rawMetricDataPoint.childNodes[0].textContent,
-                metricName: rawMetricDataPoint.childNodes[1].textContent,
+                metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
                 metricValue: value
             };
         }
         ;
         // for each time slice, collect all referenced data points
         slices.forEach(function (slice) {
-            slice.references.forEach(function (reference) {
-                var dataPoint = metricData[reference];
-                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] = metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] || [];
-                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName].push([dataPoint.metricValue, slice.endTime]);
+            var dataPoints = slice.references.map(function (reference) { return metricData[reference]; });
+            // post processing, aggregation
+            if (/^sum|mean|max|min|median$/.test(aggregationMode)) {
+                var aggregate = aggregations[aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));
+                dataPoints = [{
+                        metricKey: aggregationMode,
+                        metricValue: aggregate
+                    }];
+            }
+            dataPoints.forEach(function (dataPoint) {
+                metrics[dataPoint.metricKey] = metrics[dataPoint.metricKey] || [];
+                metrics[dataPoint.metricKey].push([dataPoint.metricValue, slice.endTime]);
             });
-        });
+        }, this);
         // sort the data points for proper line display in Grafana and add all series to the response
         Object.keys(metrics).forEach(function (metric) {
             metrics[metric].sort(function (a, b) {

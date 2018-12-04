@@ -4,11 +4,13 @@ export default class ApmRawQuery {
     metricRegex: string;
     temporalResolution: string;
     isAutoEscapingEnabled: boolean;
+    aggregationMode: string;
 
     constructor () {
         this.agentRegex = "";
         this.metricRegex = "";
         this.temporalResolution = "";
         this.isAutoEscapingEnabled = true;
+        this.aggregationMode = "none";
     }
 }

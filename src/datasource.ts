@@ -38,6 +38,7 @@ export class ApmDatasource {
                     let agentRegex = "" || query.agentRegex;
                     let metricRegex = "" || query.metricRegex;
                     let dataFrequency = "" || query.temporalResolution;
+                    let aggregationMode = "" || query.aggregationMode;
 
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
@@ -71,7 +72,7 @@ export class ApmDatasource {
                         headers: headers,
                         data: this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
                     }).then((response) => {                        
-                        this.parseResponseData(response.data, grafanaResponse);
+                        this.parseResponseData(response.data, grafanaResponse, aggregationMode);
                         resolve();
                     })
                 }
@@ -121,7 +122,7 @@ export class ApmDatasource {
         });
     }
 
-    private parseResponseData(responseData: string, grafanaResponse: any) {
+    private parseResponseData(responseData: string, grafanaResponse: any, aggregationMode: string) {
         //let rawArray;
         let returnCount: number;
         let rawArray;
@@ -147,6 +148,13 @@ export class ApmDatasource {
         const metricData: { [key: number]: Object } = {};
         const metrics = {};
         const legendSeparator = "|";
+        const aggregations = {
+            sum: metricValues => metricValues.reduce((sum, metricValue) => sum += metricValue, 0),
+            mean: metricValues => metricValues.reduce((sum, metricValue) => sum += metricValue, 0) / metricValues.length,
+            max: metricValues => metricValues.reduce((a, b) => Math.max(a, b)),
+            min: metricValues => metricValues.reduce((a, b) => Math.min(a, b)),
+            median: metricValues => console.log("not implemented yet")
+        };
         let references: Array<any>;
 
         // first process the time slices
@@ -182,20 +190,30 @@ export class ApmDatasource {
             }
 
             metricData[id] = {
-                agentName: rawMetricDataPoint.childNodes[0].textContent,
-                metricName: rawMetricDataPoint.childNodes[1].textContent,
+                metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
                 metricValue: value
             }
         };
 
         // for each time slice, collect all referenced data points
         slices.forEach(function (slice) {
-            slice.references.forEach(function (reference) {
-                const dataPoint = metricData[reference] as MetricPoint;
-                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] = metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName] || [];
-                metrics[dataPoint.agentName + legendSeparator + dataPoint.metricName].push([dataPoint.metricValue, slice.endTime]);
+            var dataPoints: [MetricPoint] = slice.references.map(reference => metricData[reference]);
+
+            // post processing, aggregation
+            if (/^sum|mean|max|min|median$/.test(aggregationMode)) {
+                const aggregate = aggregations[aggregationMode](dataPoints.map((dataPoint: MetricPoint) => dataPoint.metricValue));
+
+                dataPoints = [{
+                    metricKey: aggregationMode,
+                    metricValue: aggregate
+                }];
+            }
+
+            dataPoints.forEach((dataPoint: MetricPoint) => {
+                metrics[dataPoint.metricKey] = metrics[dataPoint.metricKey] || [];
+                metrics[dataPoint.metricKey].push([dataPoint.metricValue, slice.endTime]);
             })
-        })
+        }, this)
 
         // sort the data points for proper line display in Grafana and add all series to the response
         Object.keys(metrics).forEach(function (metric) {
@@ -314,7 +332,6 @@ interface Target {
 }
 
 interface MetricPoint {
-    agentName: String;
-    metricName: String;
-    metricValue: String;
+    metricKey: string;
+    metricValue: number;
 }

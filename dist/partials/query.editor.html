@@ -17,7 +17,19 @@
     </div>
     <div class="gf-form-inline">
       <gf-form-switch class="gf-form" label="Auto-Escape Query Strings" tooltip="Toggle automatic escaping of agent and metric query strings. Disable for advanced RegEx. Escapes &quot;|&quot;, &quot;(&quot;, and &quot;)&quot;."
-        label-class="width-15" checked="ctrl.target.rawQuery.isAutoEscapingEnabled" on-change="ctrl.panelCtrl.refresh()"></gf-form-switch>
+        label-class="width-15" checked="ctrl.target.rawQuery.isAutoEscapingEnabled" on-change="ctrl.panelCtrl.refresh()">
+      </gf-form-switch>
+      <div class="gf-form">
+        <label class="gf-form-label width-12">Multi-Series Aggregation</label>
+        <div class="gf-form-select-wrapper max-width-9">
+          <select
+            class="input-small gf-form-input"
+            ng-model="ctrl.target.rawQuery.aggregationMode"
+            ng-options="am for am in ['none', 'sum', 'mean', 'max', 'min', 'median']"
+            ng-change="ctrl.panelCtrl.refresh()">
+          </select>
+        </div>
+      </div>
       <div class="gf-form gf-form--grow">
         <div class="gf-form-label gf-form-label--grow"></div>
       </div>
