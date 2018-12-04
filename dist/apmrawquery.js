@@ -7,6 +7,7 @@ var ApmRawQuery = /** @class */ (function () {
         this.temporalResolution = "";
         this.isAutoEscapingEnabled = true;
         this.aggregationMode = "none";
+        this.aggregatedSeriesAlias = "";
     }
     return ApmRawQuery;
 }());

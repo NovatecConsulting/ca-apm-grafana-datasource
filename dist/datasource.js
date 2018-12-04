@@ -31,6 +31,7 @@ var ApmDatasource = /** @class */ (function () {
                     var metricRegex = "" || query.metricRegex;
                     var dataFrequency = "" || query.temporalResolution;
                     var aggregationMode_1 = "" || query.aggregationMode;
+                    var seriesAlias_1 = "" || query.aggregatedSeriesAlias;
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
                     }
@@ -58,7 +59,7 @@ var ApmDatasource = /** @class */ (function () {
                         headers: headers,
                         data: _this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
                     }).then(function (response) {
-                        _this.parseResponseData(response.data, grafanaResponse, aggregationMode_1);
+                        _this.parseResponseData(response.data, grafanaResponse, aggregationMode_1, seriesAlias_1);
                         resolve();
                     });
                 }
@@ -104,7 +105,7 @@ var ApmDatasource = /** @class */ (function () {
             return { status: 'failure', message: 'Data source is not working: ' + response.status, title: 'Failure' };
         });
     };
-    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, aggregationMode) {
+    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, aggregationMode, seriesAlias) {
         var _this = this;
         //let rawArray;
         var returnCount;
@@ -177,7 +178,7 @@ var ApmDatasource = /** @class */ (function () {
             if (/^sum|mean|max|min|median$/.test(aggregationMode)) {
                 var aggregate = aggregations[aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));
                 dataPoints = [{
-                        metricKey: aggregationMode,
+                        metricKey: !seriesAlias || /^\s*$/.test(seriesAlias) ? aggregationMode : seriesAlias,
                         metricValue: aggregate
                     }];
             }

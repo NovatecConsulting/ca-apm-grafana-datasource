@@ -5,6 +5,7 @@ export default class ApmRawQuery {
     temporalResolution: string;
     isAutoEscapingEnabled: boolean;
     aggregationMode: string;
+    aggregatedSeriesAlias: string;
 
     constructor () {
         this.agentRegex = "";
@@ -12,5 +13,6 @@ export default class ApmRawQuery {
         this.temporalResolution = "";
         this.isAutoEscapingEnabled = true;
         this.aggregationMode = "none";
+        this.aggregatedSeriesAlias = "";
     }
 }

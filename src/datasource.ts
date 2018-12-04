@@ -39,6 +39,7 @@ export class ApmDatasource {
                     let metricRegex = "" || query.metricRegex;
                     let dataFrequency = "" || query.temporalResolution;
                     let aggregationMode = "" || query.aggregationMode;
+                    let seriesAlias = "" || query.aggregatedSeriesAlias;
 
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
@@ -72,7 +73,7 @@ export class ApmDatasource {
                         headers: headers,
                         data: this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
                     }).then((response) => {                        
-                        this.parseResponseData(response.data, grafanaResponse, aggregationMode);
+                        this.parseResponseData(response.data, grafanaResponse, aggregationMode, seriesAlias);
                         resolve();
                     })
                 }
@@ -122,7 +123,7 @@ export class ApmDatasource {
         });
     }
 
-    private parseResponseData(responseData: string, grafanaResponse: any, aggregationMode: string) {
+    private parseResponseData(responseData: string, grafanaResponse: any, aggregationMode: string, seriesAlias: string) {
         //let rawArray;
         let returnCount: number;
         let rawArray;
@@ -204,7 +205,7 @@ export class ApmDatasource {
                 const aggregate = aggregations[aggregationMode](dataPoints.map((dataPoint: MetricPoint) => dataPoint.metricValue));
 
                 dataPoints = [{
-                    metricKey: aggregationMode,
+                    metricKey: !seriesAlias || /^\s*$/.test(seriesAlias) ? aggregationMode : seriesAlias,
                     metricValue: aggregate
                 }];
             }
