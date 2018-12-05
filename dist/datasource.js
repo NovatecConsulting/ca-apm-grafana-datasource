@@ -207,6 +207,7 @@ var ApmDatasource = /** @class */ (function () {
                 datapoints: metrics[metric]
             });
         });
+        grafanaResponse.data.sort(function (a, b) { return +(a.target > b.target) || -(a.target < b.target); });
     };
     ApmDatasource.prototype.escapeQueryString = function (queryString) {
         return (queryString + '').replace(new RegExp('[|()]', 'g'), '\\$&');

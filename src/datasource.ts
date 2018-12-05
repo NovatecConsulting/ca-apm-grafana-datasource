@@ -236,6 +236,8 @@ export class ApmDatasource {
                 datapoints: metrics[metric]
             });
         })
+        
+        grafanaResponse.data.sort((a, b) => +(a.target > b.target) || -(a.target < b.target));
     }
 
     private escapeQueryString(queryString) {
