@@ -164,16 +164,26 @@ var ApmDatasource = /** @class */ (function () {
             if (!(rawMetricDataPoint.childNodes[3].getAttribute("xsi:nil") === "true")) {
                 // we have a value, convert to int implicitly
                 value = +rawMetricDataPoint.childNodes[3].textContent;
+                // collect values into map, drop NaN values
+                if (!isNaN(value)) {
+                    metricData[id] = {
+                        metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
+                        metricValue: value
+                    };
+                }
             }
-            metricData[id] = {
-                metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
-                metricValue: value
-            };
         }
         ;
         // for each time slice, collect all referenced data points
         slices.forEach(function (slice) {
-            var dataPoints = slice.references.map(function (reference) { return metricData[reference]; });
+            var dataPoints = slice.references
+                .reduce(function (dataPoints, reference) {
+                var dataPoint = metricData[reference];
+                if (typeof dataPoint != "undefined") {
+                    dataPoints.push(dataPoint);
+                }
+                return dataPoints;
+            }, []);
             // post processing, aggregation
             if (/^sum|mean|max|min|median$/.test(aggregationMode)) {
                 var aggregate = aggregations[aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));

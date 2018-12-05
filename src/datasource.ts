@@ -188,17 +188,27 @@ export class ApmDatasource {
             if (!(rawMetricDataPoint.childNodes[3].getAttribute("xsi:nil") === "true")) {
                 // we have a value, convert to int implicitly
                 value = +rawMetricDataPoint.childNodes[3].textContent;
-            }
 
-            metricData[id] = {
-                metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
-                metricValue: value
+                // collect values into map, drop NaN values
+                if (!isNaN(value)) {
+                    metricData[id] = {
+                        metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
+                        metricValue: value
+                    }
+                }
             }
         };
 
         // for each time slice, collect all referenced data points
         slices.forEach(function (slice) {
-            var dataPoints: [MetricPoint] = slice.references.map(reference => metricData[reference]);
+            var dataPoints: [MetricPoint] = slice.references
+                .reduce((dataPoints, reference) => {
+                    const dataPoint = metricData[reference];
+                    if (typeof dataPoint != "undefined") {
+                        dataPoints.push(dataPoint);
+                    }
+                    return dataPoints;
+                }, [])
 
             // post processing, aggregation
             if (/^sum|mean|max|min|median$/.test(aggregationMode)) {

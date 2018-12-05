@@ -49,7 +49,7 @@ You can create variables for templating based on APM queries. You can either que
 Considering the different temporal aggregation levels of CA APM, it makes sense to use a template variable to control the temporal resolution of time series data dynamically. Simply create a dashboard variable of type _Interval_ and use `15s,30s,1m,2m,6m,12m,24m,48m,1h,168m,12h` for the values.
 
 ### Series Aggregation
-In raw query mode, you can choose an aggregation mode to aggregate multiple metrics into a single series of values. This way, you can get a single aggregated time series for visualization in Grafana if your query returns multiple metrics. The implemented aggregation modes are _sum_, _mean_, _max_, _min_, and _median_. Be careful when your metrics might contain null values - these are not explicitly handled by the aggregation methods.
+In raw query mode, you can choose an aggregation mode to aggregate multiple metrics into a single series of values. This way, you can get a single aggregated time series for visualization in Grafana if your query returns multiple metrics. The implemented aggregation modes are _sum_, _mean_, _max_, _min_, and _median_.
 
 ![Series-Aggregation](https://github.com/NovaTecConsulting/ca-apm-grafana-datasource/blob/master/media/multi_series_aggregation.gif)
 
