@@ -60,4 +60,4 @@ Copyright (c) 2017 Novatec Consulting GmbH. All rights reserved.
 Licensed under the [MIT](LICENSE.md) License.
 
 ## Issues, Feedback and Support
-If you experience any issues, have some feedback, or are interested in support, contact us here on GitHub or via email at apm@novatec-gmbh.de.
+If you experience any issues, have some feedback, or are interested in support, contact us here on GitHub or via email at digital-experience@novatec-gmbh.de.
