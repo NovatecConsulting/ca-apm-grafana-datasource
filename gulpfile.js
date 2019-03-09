@@ -36,14 +36,14 @@ gulp.task('lib', function () {
         .pipe(gulp.dest('dist/lib/'));
 });
 
-gulp.task('watch', ['compile'], () => {
-    gulp.watch('src/**/*.ts', ['compile']);
-    gulp.watch('src/**/*.json', ['assets']);
-    gulp.watch('src/**/*.md', ['assets']);
-    gulp.watch('src/partials/*', ['partials']);
-    gulp.watch('src/css/*', ['css']);
-    gulp.watch('src/img/*', ['img']);
-    gulp.watch('src/lib/**/*', ['lib']);
-})
+gulp.task('watch', gulp.series('compile', () => {
+    gulp.watch('src/**/*.ts', gulp.series('compile'));
+    gulp.watch('src/**/*.json', gulp.series('assets'));
+    gulp.watch('src/**/*.md', gulp.series('assets'));
+    gulp.watch('src/partials/*', gulp.series('partials'));
+    gulp.watch('src/css/*', gulp.series('css'));
+    gulp.watch('src/img/*', gulp.series('img'));
+    gulp.watch('src/lib/**/*', gulp.series('lib'));
+}));
 
-gulp.task('default', ['watch', 'assets', 'partials', 'css', 'img', 'lib']);
+gulp.task('default', gulp.series('watch', 'assets', 'partials', 'css', 'img', 'lib'));

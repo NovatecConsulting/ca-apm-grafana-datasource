@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "gulp": "^3.9.1",
+    "gulp": "^4.0.0",
     "gulp-typescript": "^4.0.2",
     "typescript": "^2.9.2"
   }
