@@ -33,13 +33,14 @@ export class ApmDatasource {
                     resolve();
                 } else {
 
-                    let query: ApmRawQuery = target.rawQuery;
+                    const query: ApmRawQuery = target.rawQuery;
 
                     let agentRegex = "" || query.agentRegex;
                     let metricRegex = "" || query.metricRegex;
                     let dataFrequency = "" || query.temporalResolution;
-                    let aggregationMode = "" || query.aggregationMode;
-                    let seriesAlias = "" || query.aggregatedSeriesAlias;
+                    const aggregationMode = "" || query.aggregationMode;
+                    const seriesAlias = "" || query.seriesAlias;
+                    const aliasRegex = "" || query.aliasRegex;
 
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
@@ -72,8 +73,13 @@ export class ApmDatasource {
                         method: 'POST',
                         headers: headers,
                         data: this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
-                    }).then((response) => {                        
-                        this.parseResponseData(response.data, grafanaResponse, aggregationMode, seriesAlias);
+                    }).then((response) => {
+                        const options = {
+                            aggregationMode: aggregationMode,
+                            seriesAlias: seriesAlias,
+                            aliasRegex: aliasRegex
+                        }
+                        this.parseResponseData(response.data, grafanaResponse, options);
                         resolve();
                     })
                 }
@@ -123,7 +129,7 @@ export class ApmDatasource {
         });
     }
 
-    private parseResponseData(responseData: string, grafanaResponse: any, aggregationMode: string, seriesAlias: string) {
+    private parseResponseData(responseData: string, grafanaResponse: any, options: any) {
         //let rawArray;
         let returnCount: number;
         let rawArray;
@@ -179,7 +185,6 @@ export class ApmDatasource {
         
         // then collect the actual data points into a map
         for (let i = returnCount; i < rawArray.length; i++) {
-
             const rawMetricDataPoint = rawArray[i];
             const id = rawMetricDataPoint.getAttribute("id").split("id")[1];
             let value = null;
@@ -191,8 +196,15 @@ export class ApmDatasource {
 
                 // collect values into map, drop NaN values
                 if (!isNaN(value)) {
+
+                    let metricKey = rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent;
+
+                    if (!/^sum|mean|max|min|median$/.test(options.aggregationMode) && !/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
+                        metricKey = metricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
+                    }
+
                     metricData[id] = {
-                        metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
+                        metricKey: metricKey,
                         metricValue: value
                     }
                 }
@@ -210,14 +222,24 @@ export class ApmDatasource {
                     return dataPoints;
                 }, [])
 
-            // post processing, aggregation
-            if (/^sum|mean|max|min|median$/.test(aggregationMode)) {
-                const aggregate = aggregations[aggregationMode](dataPoints.map((dataPoint: MetricPoint) => dataPoint.metricValue));
+            // post processing
+            // 1. if configured, aggregate all time series
+            if (/^sum|mean|max|min|median$/.test(options.aggregationMode)) {
+                const aggregate = aggregations[options.aggregationMode](dataPoints.map((dataPoint: MetricPoint) => dataPoint.metricValue));
 
                 dataPoints = [{
-                    metricKey: !seriesAlias || /^\s*$/.test(seriesAlias) ? aggregationMode : seriesAlias,
+                    metricKey: !options.seriesAlias || /^\s*$/.test(options.seriesAlias) ? options.aggregationMode : options.seriesAlias,
                     metricValue: aggregate
                 }];
+            
+            // 2. if no aggregation but series alias and series regex are configured, replace the individual metric keys / series names
+            /*} else if (!/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
+
+                dataPoints.forEach((dataPoint: MetricPoint) => {
+                    console.log(RegExp(options.aliasRegex, "g"));
+                    console.log(options.seriesAlias);
+                    dataPoint.metricKey = dataPoint.metricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
+                })*/
             }
 
             dataPoints.forEach((dataPoint: MetricPoint) => {

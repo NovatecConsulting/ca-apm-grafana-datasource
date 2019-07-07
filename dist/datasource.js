@@ -31,7 +31,8 @@ var ApmDatasource = /** @class */ (function () {
                     var metricRegex = "" || query.metricRegex;
                     var dataFrequency = "" || query.temporalResolution;
                     var aggregationMode_1 = "" || query.aggregationMode;
-                    var seriesAlias_1 = "" || query.aggregatedSeriesAlias;
+                    var seriesAlias_1 = "" || query.seriesAlias;
+                    var aliasRegex_1 = "" || query.aliasRegex;
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
                     }
@@ -59,7 +60,12 @@ var ApmDatasource = /** @class */ (function () {
                         headers: headers,
                         data: _this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
                     }).then(function (response) {
-                        _this.parseResponseData(response.data, grafanaResponse, aggregationMode_1, seriesAlias_1);
+                        var options = {
+                            aggregationMode: aggregationMode_1,
+                            seriesAlias: seriesAlias_1,
+                            aliasRegex: aliasRegex_1
+                        };
+                        _this.parseResponseData(response.data, grafanaResponse, options);
                         resolve();
                     });
                 }
@@ -105,7 +111,7 @@ var ApmDatasource = /** @class */ (function () {
             return { status: 'failure', message: 'Data source is not working: ' + response.status, title: 'Failure' };
         });
     };
-    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, aggregationMode, seriesAlias) {
+    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, options) {
         var _this = this;
         //let rawArray;
         var returnCount;
@@ -166,8 +172,12 @@ var ApmDatasource = /** @class */ (function () {
                 value = +rawMetricDataPoint.childNodes[3].textContent;
                 // collect values into map, drop NaN values
                 if (!isNaN(value)) {
+                    var metricKey = rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent;
+                    if (!/^sum|mean|max|min|median$/.test(options.aggregationMode) && !/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
+                        metricKey = metricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
+                    }
                     metricData[id] = {
-                        metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
+                        metricKey: metricKey,
                         metricValue: value
                     };
                 }
@@ -184,13 +194,22 @@ var ApmDatasource = /** @class */ (function () {
                 }
                 return dataPoints;
             }, []);
-            // post processing, aggregation
-            if (/^sum|mean|max|min|median$/.test(aggregationMode)) {
-                var aggregate = aggregations[aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));
+            // post processing
+            // 1. if configured, aggregate all time series
+            if (/^sum|mean|max|min|median$/.test(options.aggregationMode)) {
+                var aggregate = aggregations[options.aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));
                 dataPoints = [{
-                        metricKey: !seriesAlias || /^\s*$/.test(seriesAlias) ? aggregationMode : seriesAlias,
+                        metricKey: !options.seriesAlias || /^\s*$/.test(options.seriesAlias) ? options.aggregationMode : options.seriesAlias,
                         metricValue: aggregate
                     }];
+                // 2. if no aggregation but series alias and series regex are configured, replace the individual metric keys / series names
+                /*} else if (!/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
+    
+                    dataPoints.forEach((dataPoint: MetricPoint) => {
+                        console.log(RegExp(options.aliasRegex, "g"));
+                        console.log(options.seriesAlias);
+                        dataPoint.metricKey = dataPoint.metricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
+                    })*/
             }
             dataPoints.forEach(function (dataPoint) {
                 metrics[dataPoint.metricKey] = metrics[dataPoint.metricKey] || [];
