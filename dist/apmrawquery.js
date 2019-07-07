@@ -7,7 +7,8 @@ var ApmRawQuery = /** @class */ (function () {
         this.temporalResolution = "";
         this.isAutoEscapingEnabled = true;
         this.aggregationMode = "none";
-        this.aggregatedSeriesAlias = "";
+        this.seriesAlias = "";
+        this.aliasRegex = "";
     }
     return ApmRawQuery;
 }());

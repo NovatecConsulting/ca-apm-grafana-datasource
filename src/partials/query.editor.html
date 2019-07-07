@@ -30,19 +30,19 @@
           </select>
         </div>
       </div>
-      <div class="gf-form">
-        <label class="gf-form-label width-12">Aggregated Series Alias</label>
-        <div class="gf-form-wrapper max-width-12">
-          <input type="text"
-                 class="gf-form-input"
-                 ng-model="ctrl.target.rawQuery.aggregatedSeriesAlias"
-                 spellcheck='false'
-                 placeholder="Series Alias"
-                 ng-blur="ctrl.refresh()">
-        </div>
+      <div ng-if="ctrl.target.rawQuery.aggregationMode == 'none'" class="gf-form-label width-7">
+        <label>Alias RegEx</label>
       </div>
-      <div class="gf-form gf-form--grow">
-        <div class="gf-form-label gf-form-label--grow"></div>
+      <div ng-if="ctrl.target.rawQuery.aggregationMode == 'none'" class="gf-form--grow">
+        <input type="text" class="gf-form-input" ng-model="ctrl.target.rawQuery.aliasRegex" spellcheck='false'
+          placeholder="Alias RegEx" ng-blur="ctrl.refresh()">
+      </div>
+      <div class="gf-form-label width-7">
+        <label>Series Alias</label>
+      </div>
+      <div class="gf-form--grow">
+        <input type="text" class="gf-form-input" ng-model="ctrl.target.rawQuery.seriesAlias" spellcheck='false'
+          placeholder="Series Alias" ng-blur="ctrl.refresh()">
       </div>
     </div>
   </div>

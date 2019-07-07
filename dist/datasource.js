@@ -21,7 +21,7 @@ var ApmDatasource = /** @class */ (function () {
         var endTime = options.range.to.toISOString();
         var grafanaResponse = { data: [] };
         var requests = options.targets.map(function (target) {
-            return new Promise(function (resolve) {
+            return new Promise(function (resolve, reject) {
                 if (target.hide || !target.rawQuery) {
                     resolve();
                 }
@@ -30,8 +30,15 @@ var ApmDatasource = /** @class */ (function () {
                     var agentRegex = "" || query.agentRegex;
                     var metricRegex = "" || query.metricRegex;
                     var dataFrequency = "" || query.temporalResolution;
-                    var aggregationMode_1 = "" || query.aggregationMode;
-                    var seriesAlias_1 = "" || query.aggregatedSeriesAlias;
+                    //fix to support migration of dashboards created with previous versions of the data source plugin
+                    //@ts-ignore
+                    if (query.aggregatedSeriesAlias !== undefined) {
+                        //@ts-ignore
+                        query.seriesAlias = query.aggregatedSeriesAlias;
+                    }
+                    var aggregationMode_1 = query.aggregationMode === undefined ? "" : query.aggregationMode;
+                    var seriesAlias_1 = query.seriesAlias === undefined ? "none" : query.seriesAlias;
+                    var aliasRegex_1 = query.aliasRegex === undefined ? "" : query.aliasRegex;
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
                     }
@@ -59,14 +66,23 @@ var ApmDatasource = /** @class */ (function () {
                         headers: headers,
                         data: _this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
                     }).then(function (response) {
-                        _this.parseResponseData(response.data, grafanaResponse, aggregationMode_1, seriesAlias_1);
+                        var options = {
+                            aggregationMode: aggregationMode_1,
+                            seriesAlias: seriesAlias_1,
+                            aliasRegex: aliasRegex_1
+                        };
+                        _this.parseResponseData(response.data, grafanaResponse, options);
                         resolve();
+                    }).catch(function (error) {
+                        reject(error);
                     });
                 }
             });
         });
         return Promise.all(requests).then(function () {
             return grafanaResponse;
+        }).catch(function (error) {
+            throw error;
         });
     };
     ApmDatasource.prototype.metricFindQuery = function (query) {
@@ -105,7 +121,7 @@ var ApmDatasource = /** @class */ (function () {
             return { status: 'failure', message: 'Data source is not working: ' + response.status, title: 'Failure' };
         });
     };
-    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, aggregationMode, seriesAlias) {
+    ApmDatasource.prototype.parseResponseData = function (responseData, grafanaResponse, options) {
         var _this = this;
         //let rawArray;
         var returnCount;
@@ -166,8 +182,9 @@ var ApmDatasource = /** @class */ (function () {
                 value = +rawMetricDataPoint.childNodes[3].textContent;
                 // collect values into map, drop NaN values
                 if (!isNaN(value)) {
+                    var metricKey = rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent;
                     metricData[id] = {
-                        metricKey: rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent,
+                        metricKey: metricKey,
                         metricValue: value
                     };
                 }
@@ -184,11 +201,11 @@ var ApmDatasource = /** @class */ (function () {
                 }
                 return dataPoints;
             }, []);
-            // post processing, aggregation
-            if (/^sum|mean|max|min|median$/.test(aggregationMode)) {
-                var aggregate = aggregations[aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));
+            // post processing: if configured, aggregate all time series
+            if (/^sum|mean|max|min|median$/.test(options.aggregationMode)) {
+                var aggregate = aggregations[options.aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));
                 dataPoints = [{
-                        metricKey: !seriesAlias || /^\s*$/.test(seriesAlias) ? aggregationMode : seriesAlias,
+                        metricKey: !options.seriesAlias || /^\s*$/.test(options.seriesAlias) ? options.aggregationMode : options.seriesAlias,
                         metricValue: aggregate
                     }];
             }
@@ -197,6 +214,25 @@ var ApmDatasource = /** @class */ (function () {
                 metrics[dataPoint.metricKey].push([dataPoint.metricValue, slice.endTime]);
             });
         }, this);
+        // post processing: if configured, alias metric keys / series names
+        if (!/^sum|mean|max|min|median$/.test(options.aggregationMode) && !/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
+            var aliasedMetrics = {};
+            ;
+            for (var _i = 0, _a = Object.keys(metrics); _i < _a.length; _i++) {
+                var originalMetricKey = _a[_i];
+                var originalMetricValues = metrics[originalMetricKey];
+                var aliasedMetricKey = originalMetricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
+                if (aliasedMetricKey in aliasedMetrics) {
+                    // aliased key already exists, abort
+                    throw new Error("Series alias is not unique within query response");
+                }
+                else {
+                    // aliased key does not exist
+                    aliasedMetrics[aliasedMetricKey] = originalMetricValues;
+                }
+            }
+            metrics = aliasedMetrics;
+        }
         // sort the data points for proper line display in Grafana and add all series to the response
         Object.keys(metrics).forEach(function (metric) {
             metrics[metric].sort(function (a, b) {
