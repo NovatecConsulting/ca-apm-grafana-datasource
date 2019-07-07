@@ -222,8 +222,7 @@ export class ApmDatasource {
                     return dataPoints;
                 }, [])
 
-            // post processing
-            // 1. if configured, aggregate all time series
+            // post processing: if configured, aggregate all time series
             if (/^sum|mean|max|min|median$/.test(options.aggregationMode)) {
                 const aggregate = aggregations[options.aggregationMode](dataPoints.map((dataPoint: MetricPoint) => dataPoint.metricValue));
 
@@ -231,15 +230,6 @@ export class ApmDatasource {
                     metricKey: !options.seriesAlias || /^\s*$/.test(options.seriesAlias) ? options.aggregationMode : options.seriesAlias,
                     metricValue: aggregate
                 }];
-            
-            // 2. if no aggregation but series alias and series regex are configured, replace the individual metric keys / series names
-            /*} else if (!/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
-
-                dataPoints.forEach((dataPoint: MetricPoint) => {
-                    console.log(RegExp(options.aliasRegex, "g"));
-                    console.log(options.seriesAlias);
-                    dataPoint.metricKey = dataPoint.metricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
-                })*/
             }
 
             dataPoints.forEach((dataPoint: MetricPoint) => {
