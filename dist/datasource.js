@@ -173,9 +173,6 @@ var ApmDatasource = /** @class */ (function () {
                 // collect values into map, drop NaN values
                 if (!isNaN(value)) {
                     var metricKey = rawMetricDataPoint.childNodes[0].textContent + legendSeparator + rawMetricDataPoint.childNodes[1].textContent;
-                    if (!/^sum|mean|max|min|median$/.test(options.aggregationMode) && !/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
-                        metricKey = metricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
-                    }
                     metricData[id] = {
                         metricKey: metricKey,
                         metricValue: value
@@ -207,6 +204,30 @@ var ApmDatasource = /** @class */ (function () {
                 metrics[dataPoint.metricKey].push([dataPoint.metricValue, slice.endTime]);
             });
         }, this);
+        // post processing: if configured, alias metric keys / series names
+        if (!/^sum|mean|max|min|median$/.test(options.aggregationMode) && !/^\s*$/.test(options.seriesAlias) && !/^\s*$/.test(options.aliasRegex)) {
+            var aliasedMetrics = {};
+            var cancelAliasing = false;
+            for (var _i = 0, _a = Object.keys(metrics); _i < _a.length; _i++) {
+                var originalMetricKey = _a[_i];
+                var originalMetricValues = metrics[originalMetricKey];
+                var aliasedMetricKey = originalMetricKey.replace(RegExp(options.aliasRegex, "g"), options.seriesAlias);
+                if (!(aliasedMetricKey in aliasedMetrics)) {
+                    // aliased key does not exist
+                    aliasedMetrics[aliasedMetricKey] = originalMetricValues;
+                }
+                else {
+                    // aliased key already exists, abort
+                    console.log("aliasing canceled, aliased series name is not unique within query");
+                    cancelAliasing = true;
+                    break;
+                }
+            }
+            // if aliasing was successful, continue processing witht the aliased metrics
+            if (!cancelAliasing) {
+                metrics = aliasedMetrics;
+            }
+        }
         // sort the data points for proper line display in Grafana and add all series to the response
         Object.keys(metrics).forEach(function (metric) {
             metrics[metric].sort(function (a, b) {
