@@ -53,6 +53,11 @@ In raw query mode, you can choose an aggregation mode to aggregate multiple metr
 
 ![Series-Aggregation](https://github.com/NovaTecConsulting/ca-apm-grafana-datasource/blob/master/media/multi_series_aggregation.gif)
 
+### Alias Names
+You can specify regular expressions to configure alias names for the time series returned in response to your query. The regular expression is evaluated against the original name (metric path) of each series returned. Use capture groups to use parts of the original metric path in the alias name. Make sure that your configuration results in an individual alias name for each series.
+
+![Series-Alias](https://github.com/NovaTecConsulting/ca-apm-grafana-datasource/blob/master/media/series-alias.gif)
+
 ## License
 
 Copyright (c) 2017 Novatec Consulting GmbH. All rights reserved.
