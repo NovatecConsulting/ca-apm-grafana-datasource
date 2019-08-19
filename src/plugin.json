@@ -25,8 +25,8 @@
         "url": "https://github.com/oberschlauberger/ca-apm-grafana-datasource/blob/master/LICENSE.md"
       }
     ],
-    "version": "0.4",
-    "updated": "2018-09-13"
+    "version": "0.4.1",
+    "updated": "2019-08-19"
   },
 
   "dependencies": {
