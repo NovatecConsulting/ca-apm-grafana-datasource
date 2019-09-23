@@ -41,13 +41,13 @@ export class ApmDatasource {
 
                     //fix to support migration of dashboards created with previous versions of the data source plugin
                     //@ts-ignore
-                    if (query.aggregatedSeriesAlias !== undefined) {
+                    if (query.seriesAlias === undefined && query.aggregatedSeriesAlias !== undefined) {
                         //@ts-ignore
                         query.seriesAlias = query.aggregatedSeriesAlias;
                     }
 
-                    const aggregationMode = query.aggregationMode === undefined ? "" : query.aggregationMode;
-                    const seriesAlias = query.seriesAlias === undefined ? "none" : query.seriesAlias;
+                    const aggregationMode = query.aggregationMode === undefined ? "none" : query.aggregationMode;
+                    const seriesAlias = query.seriesAlias === undefined ? "" : query.seriesAlias;
                     const aliasRegex = query.aliasRegex === undefined ? "" : query.aliasRegex;
 
                     if (!(agentRegex && metricRegex && dataFrequency)) {

@@ -32,12 +32,12 @@ var ApmDatasource = /** @class */ (function () {
                     var dataFrequency = "" || query.temporalResolution;
                     //fix to support migration of dashboards created with previous versions of the data source plugin
                     //@ts-ignore
-                    if (query.aggregatedSeriesAlias !== undefined) {
+                    if (query.seriesAlias === undefined && query.aggregatedSeriesAlias !== undefined) {
                         //@ts-ignore
                         query.seriesAlias = query.aggregatedSeriesAlias;
                     }
-                    var aggregationMode_1 = query.aggregationMode === undefined ? "" : query.aggregationMode;
-                    var seriesAlias_1 = query.seriesAlias === undefined ? "none" : query.seriesAlias;
+                    var aggregationMode_1 = query.aggregationMode === undefined ? "none" : query.aggregationMode;
+                    var seriesAlias_1 = query.seriesAlias === undefined ? "" : query.seriesAlias;
                     var aliasRegex_1 = query.aliasRegex === undefined ? "" : query.aliasRegex;
                     if (!(agentRegex && metricRegex && dataFrequency)) {
                         resolve();
