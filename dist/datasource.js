@@ -64,7 +64,8 @@ var ApmDatasource = /** @class */ (function () {
                         url: _this.url + '/introscope-web-services/services/MetricsDataService',
                         method: 'POST',
                         headers: headers,
-                        data: _this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
+                        data: _this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds),
+                        requestId: options.panelId + target.refId
                     }).then(function (response) {
                         var options = {
                             aggregationMode: aggregationMode_1,

@@ -80,7 +80,8 @@ export class ApmDatasource {
                         url: this.url + '/introscope-web-services/services/MetricsDataService',
                         method: 'POST',
                         headers: headers,
-                        data: this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds)
+                        data: this.getSoapBodyForMetricsQuery(agentRegex, metricRegex, startTime, endTime, dataFrequencyInSeconds),
+                        requestId: options.panelId + target.refId
                     }).then((response) => {
                         const options = {
                             aggregationMode: aggregationMode,
@@ -426,6 +427,7 @@ interface Target {
     rawQuery: ApmRawQuery;
     isRawQueryModeEnabled: boolean;
     hide: boolean;
+    refId: string;
 }
 
 interface MetricPoint {
