@@ -61,7 +61,7 @@ export class ApmQuery {
 
     getAgentRegex (segmentIndex?: number, trailingSeparator?: boolean) {
 
-        segmentIndex = segmentIndex ? segmentIndex : this.agentSegments.length;
+        segmentIndex = segmentIndex != null ? segmentIndex : this.agentSegments.length;
         trailingSeparator = trailingSeparator ? trailingSeparator : false;
 
         let segmentPath = '';
@@ -91,7 +91,7 @@ export class ApmQuery {
 
     getMetricRegex (segmentIndex?: number, trailingSeparator?: boolean) {
         
-        segmentIndex = segmentIndex ? segmentIndex : this.metricSegments.length;
+        segmentIndex = segmentIndex != null ? segmentIndex : this.metricSegments.length;
         trailingSeparator = trailingSeparator ? trailingSeparator : false;
 
         let segmentPath = '';
