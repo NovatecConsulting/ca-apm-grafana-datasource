@@ -149,8 +149,8 @@ var ApmDatasource = /** @class */ (function () {
         var metrics = {};
         var legendSeparator = "|";
         var aggregations = {
-            sum: function (metricValues) { return metricValues.reduce(function (sum, metricValue) { return sum += metricValue; }, 0); },
-            mean: function (metricValues) { return metricValues.reduce(function (sum, metricValue) { return sum += metricValue; }, 0) / metricValues.length; },
+            sum: function (metricValues) { return metricValues.reduce(function (sum, metricValue) { return sum += metricValue; }); },
+            mean: function (metricValues) { return metricValues.reduce(function (sum, metricValue) { return sum += metricValue; }) / metricValues.length; },
             max: function (metricValues) { return metricValues.reduce(function (a, b) { return Math.max(a, b); }); },
             min: function (metricValues) { return metricValues.reduce(function (a, b) { return Math.min(a, b); }); },
             median: function (metricValues) { return _this.quickselect_median(metricValues); }
@@ -203,7 +203,7 @@ var ApmDatasource = /** @class */ (function () {
                 return dataPoints;
             }, []);
             // post processing: if configured, aggregate all time series
-            if (/^sum|mean|max|min|median$/.test(options.aggregationMode)) {
+            if (dataPoints.length > 0 && /^sum|mean|max|min|median$/.test(options.aggregationMode)) {
                 var aggregate = aggregations[options.aggregationMode](dataPoints.map(function (dataPoint) { return dataPoint.metricValue; }));
                 dataPoints = [{
                         metricKey: !options.seriesAlias || /^\s*$/.test(options.seriesAlias) ? options.aggregationMode : options.seriesAlias,

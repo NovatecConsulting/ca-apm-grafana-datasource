@@ -169,8 +169,8 @@ export class ApmDatasource {
         let metrics = {};
         const legendSeparator = "|";
         const aggregations = {
-            sum: metricValues => metricValues.reduce((sum, metricValue) => sum += metricValue, 0),
-            mean: metricValues => metricValues.reduce((sum, metricValue) => sum += metricValue, 0) / metricValues.length,
+            sum: metricValues => metricValues.reduce((sum, metricValue) => sum += metricValue),
+            mean: metricValues => metricValues.reduce((sum, metricValue) => sum += metricValue) / metricValues.length,
             max: metricValues => metricValues.reduce((a, b) => Math.max(a, b)),
             min: metricValues => metricValues.reduce((a, b) => Math.min(a, b)),
             median: metricValues => this.quickselect_median(metricValues)
@@ -232,7 +232,7 @@ export class ApmDatasource {
                 }, [])
 
             // post processing: if configured, aggregate all time series
-            if (/^sum|mean|max|min|median$/.test(options.aggregationMode)) {
+            if (dataPoints.length > 0 && /^sum|mean|max|min|median$/.test(options.aggregationMode)) {
                 const aggregate = aggregations[options.aggregationMode](dataPoints.map((dataPoint: MetricPoint) => dataPoint.metricValue));
 
                 dataPoints = [{
