@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 // @ts-ignore
+var data_1 = require("@grafana/data");
+// @ts-ignore
 var kbn = require("app/core/utils/kbn");
 var ApmDatasource = /** @class */ (function () {
     function ApmDatasource(instanceSettings, $q, backendSrv, templateSrv) {
@@ -13,6 +15,12 @@ var ApmDatasource = /** @class */ (function () {
         this.templateSrv = templateSrv;
         if (window.DOMParser) {
             this.parser = new DOMParser();
+        }
+        if (!data_1.rangeUtil.intervalToSeconds) {
+            this.intervalToSeconds = kbn.interval_to_seconds;
+        }
+        else {
+            this.intervalToSeconds = data_1.rangeUtil.intervalToSeconds;
         }
     }
     ApmDatasource.prototype.query = function (options) {
@@ -55,7 +63,7 @@ var ApmDatasource = /** @class */ (function () {
                         "SOAPAction": "getMetricData",
                         "Content-Type": "text/xml"
                     };
-                    var dataFrequencyInSeconds = kbn.interval_to_seconds(dataFrequency);
+                    var dataFrequencyInSeconds = _this.intervalToSeconds(dataFrequency);
                     dataFrequencyInSeconds = dataFrequencyInSeconds - (dataFrequencyInSeconds % 15);
                     if (dataFrequencyInSeconds == 0) {
                         dataFrequencyInSeconds = 15;
@@ -241,7 +249,8 @@ var ApmDatasource = /** @class */ (function () {
             });
             grafanaResponse.data.push({
                 target: metric,
-                datapoints: metrics[metric]
+                datapoints: metrics[metric],
+                refId: metric
             });
         });
         grafanaResponse.data.sort(function (a, b) { return +(a.target > b.target) || -(a.target < b.target); });

@@ -1,4 +1,6 @@
 // @ts-ignore
+import { rangeUtil } from '@grafana/data';
+// @ts-ignore
 import * as kbn from 'app/core/utils/kbn';
 import ApmRawQuery from './apmrawquery'
 
@@ -10,6 +12,8 @@ export class ApmDatasource {
     soapHead: string = '<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:met=\"http://metricslist.webservicesimpl.server.introscope.wily.com\"><soapenv:Header/><soapenv:Body>';
     soapTail: string= '</soapenv:Body></soapenv:Envelope>';
 
+    private intervalToSeconds: (interval: string) => any;
+
     constructor(instanceSettings, private $q, private backendSrv, private templateSrv) {
         
         this.url = instanceSettings.url;
@@ -17,6 +21,12 @@ export class ApmDatasource {
 
         if ((<any>window).DOMParser) {
             this.parser = new DOMParser();
+        }
+
+        if (!rangeUtil.intervalToSeconds) {
+            this.intervalToSeconds = kbn.interval_to_seconds;
+        } else {
+            this.intervalToSeconds = rangeUtil.intervalToSeconds;
         }
     }
 
@@ -70,7 +80,7 @@ export class ApmDatasource {
                         "Content-Type": "text/xml"
                     };
 
-                    let dataFrequencyInSeconds = kbn.interval_to_seconds(dataFrequency)
+                    let dataFrequencyInSeconds = this.intervalToSeconds(dataFrequency)
                     dataFrequencyInSeconds = dataFrequencyInSeconds - (dataFrequencyInSeconds % 15);
                     if (dataFrequencyInSeconds == 0) {
                         dataFrequencyInSeconds = 15;
@@ -277,7 +287,8 @@ export class ApmDatasource {
             })
             grafanaResponse.data.push({
                 target: metric,
-                datapoints: metrics[metric]
+                datapoints: metrics[metric],
+                refId: metric
             });
         })
 
