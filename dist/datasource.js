@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 // @ts-ignore
-var data_1 = require("@grafana/data");
-// @ts-ignore
 var kbn = require("app/core/utils/kbn");
 var ApmDatasource = /** @class */ (function () {
     function ApmDatasource(instanceSettings, $q, backendSrv, templateSrv) {
@@ -16,11 +14,11 @@ var ApmDatasource = /** @class */ (function () {
         if (window.DOMParser) {
             this.parser = new DOMParser();
         }
-        if (!data_1.rangeUtil.intervalToSeconds) {
+        if (kbn.interval_to_seconds) {
             this.intervalToSeconds = kbn.interval_to_seconds;
         }
         else {
-            this.intervalToSeconds = data_1.rangeUtil.intervalToSeconds;
+            this.intervalToSeconds = kbn.intervalToSeconds;
         }
     }
     ApmDatasource.prototype.query = function (options) {

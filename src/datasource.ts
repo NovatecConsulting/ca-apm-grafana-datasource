@@ -1,6 +1,4 @@
 // @ts-ignore
-import { rangeUtil } from '@grafana/data';
-// @ts-ignore
 import * as kbn from 'app/core/utils/kbn';
 import ApmRawQuery from './apmrawquery'
 
@@ -12,6 +10,7 @@ export class ApmDatasource {
     soapHead: string = '<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:met=\"http://metricslist.webservicesimpl.server.introscope.wily.com\"><soapenv:Header/><soapenv:Body>';
     soapTail: string= '</soapenv:Body></soapenv:Envelope>';
 
+    // Wrapper function for kbn.interval_to_seconds since this was renamed in Grafana 7.x to kbn.intervalToSeconds...
     private intervalToSeconds: (interval: string) => any;
 
     constructor(instanceSettings, private $q, private backendSrv, private templateSrv) {
@@ -23,10 +22,10 @@ export class ApmDatasource {
             this.parser = new DOMParser();
         }
 
-        if (!rangeUtil.intervalToSeconds) {
+        if (kbn.interval_to_seconds) {
             this.intervalToSeconds = kbn.interval_to_seconds;
         } else {
-            this.intervalToSeconds = rangeUtil.intervalToSeconds;
+            this.intervalToSeconds = kbn.intervalToSeconds
         }
     }
 
